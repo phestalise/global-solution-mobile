@@ -3,18 +3,18 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import OrbitInput from '../components/OrbitInput';
 import OrbitButton from '../components/OrbitButton';
-import { Colors } from '../styles/colors';
 import { useAuth } from '../context/AuthContext';
+import { Colors } from '../styles/colors';
 
-export default function LoginScreen({ navigation }: any) {
-  const { signIn } = useAuth();
+export default function RegisterScreen() {
+  const { register } = useAuth();
 
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -23,15 +23,15 @@ export default function LoginScreen({ navigation }: any) {
       colors={['#050816', '#0B1120', '#111827']}
       style={styles.container}
     >
-      <View style={styles.glow} />
-
-      <Text style={styles.logo}>ASTROFARM</Text>
-
-      <Text style={styles.subtitle}>
-        Central Orbital Agrícola
-      </Text>
+      <Text style={styles.title}>Nova Conta Orbital</Text>
 
       <View style={styles.card}>
+        <OrbitInput
+          placeholder="Nome"
+          value={name}
+          onChangeText={setName}
+        />
+
         <OrbitInput
           placeholder="Email"
           value={email}
@@ -46,58 +46,27 @@ export default function LoginScreen({ navigation }: any) {
         />
 
         <OrbitButton
-          title="ENTRAR"
-          onPress={() => signIn(email, password)}
-        />
-        <OrbitButton
-          title="LOGIN TESTE"
+          title="CRIAR CONTA"
           onPress={() =>
-            signIn('teste@astrofarm.com', '123456')
+            register(name, email, password)
           }
         />
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Register')}
-        >
-          <Text style={styles.link}>
-            Criar conta orbital
-          </Text>
-        </TouchableOpacity>
       </View>
     </LinearGradient>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: Colors.bg,
   },
 
-  glow: {
-    position: 'absolute',
-    width: 320,
-    height: 320,
-    borderRadius: 200,
-    backgroundColor: '#00F5A030',
-    top: -100,
-    right: -100,
-  },
-
-  logo: {
+  title: {
     color: Colors.text,
-    fontSize: 38,
+    fontSize: 32,
     fontWeight: '900',
-    marginBottom: 8,
-    letterSpacing: 4,
-  },
-
-  subtitle: {
-    color: Colors.muted,
-    marginBottom: 40,
-    fontSize: 16,
+    marginBottom: 32,
   },
 
   card: {
@@ -106,11 +75,5 @@ const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     borderColor: Colors.border,
-  },
-  link: {
-    color: Colors.secondary,
-    textAlign: 'center',
-    marginTop: 20,
-    fontWeight: '700',
   },
 });
