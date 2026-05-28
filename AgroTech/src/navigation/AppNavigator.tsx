@@ -4,15 +4,15 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors } from '../theme/colors';
+import { Colors } from '../styles/colors';
 
 // Screens
 import LoginScreen from '../screens/LoginScreen';
-import DashboardScreen from '../screens/DashboardScreen';
-import PropriedadesScreen from '../screens/PropriedadesScreen';
-import DetalhesPropriedadeScreen from '../screens/DetalhesPropriedadeScreen';
-import FormPropriedadeScreen from '../screens/FormPropriedadeScreen';
-import AlertasScreen from '../screens/AlertasScreen';
+import DashboardScreen from '../screens/Dashboardscreen';
+import PropriedadesScreen from '../screens/Propriedadesscreen';
+import DetalhesPropriedadeScreen from '../screens/Detalhespropriedadescreen';
+import FormPropriedadeScreen from '../screens/Formpropriedadescreen';
+import AlertasScreen from '../screens/Alertasscreen';
 
 const Stack = createNativeStackNavigator();
 const Tab   = createBottomTabNavigator();

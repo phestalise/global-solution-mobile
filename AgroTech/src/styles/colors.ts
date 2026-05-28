@@ -1,4 +1,4 @@
-// src/theme/colors.ts
+// src/stlye/colors.ts
 // AstroFarm — paleta: espaço escuro + verde lavoura + laranja alerta orbital
 
 export const Colors = {
