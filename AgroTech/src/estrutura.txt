@@ -1,10 +1,373 @@
-vamos lá tenho esse componente // src/components/index.tsx
+// src/theme/colors.ts
+// AstroFarm — paleta: espaço escuro + verde lavoura + laranja alerta orbital
+
+export const Colors = {
+  // Backgrounds
+  bg:          '#0A1628',   // azul noite profundo
+  bgCard:      '#0F1F3D',   // azul escuro card
+  bgSurface:   '#132040',   // superfície elevada
+
+  // Brand
+  primary:     '#2ECC71',   // verde satélite / lavoura saudável
+  primaryDark: '#1A8A4A',
+  primaryGlow: 'rgba(46,204,113,0.18)',
+
+  // Accent
+  accent:      '#F39C12',   // laranja orbital / alerta médio
+  accentRed:   '#E74C3C',   // vermelho alerta crítico
+  accentBlue:  '#3498DB',   // azul satélite / info
+
+  // Text
+  textPrimary:   '#E8F4F0',
+  textSecondary: '#8BA8C0',
+  textMuted:     '#4A6680',
+
+  // Border
+  border:      '#1E3A5F',
+  borderLight: '#2A4F78',
+
+  // Status
+  statusLow:    '#2ECC71',
+  statusMedium: '#F39C12',
+  statusHigh:   '#E74C3C',
+
+  // Transparent overlays
+  overlay:     'rgba(10,22,40,0.85)',
+};
+
+export const Fonts = {
+  light:    '300',
+  regular:  '400',
+  medium:   '500',
+  semibold: '600',
+  bold:     '700',
+};
+
+export const Spacing = {
+  xs:  4,
+  sm:  8,
+  md:  16,
+  lg:  24,
+  xl:  32,
+  xxl: 48,
+};
+
+export const Radius = {
+  sm:  8,
+  md:  12,
+  lg:  16,
+  xl:  24,
+  full: 999,
+}; 
+
+// src/types/index.ts
+
+export interface Produtor {
+  id: number;
+  nome: string;
+  email: string;
+  cpf: string;
+  telefone?: string;
+  createdAt?: string;
+}
+
+export interface Propriedade {
+  id: number;
+  nome: string;
+  localizacao: string;
+  cultura: string;       // ex: "Soja", "Milho", "Café"
+  areaHectares: number;
+  produtorId: number;
+  createdAt?: string;
+}
+
+export interface LeituraSatelital {
+  id: number;
+  propriedadeId: number;
+  ndvi: number;          // 0.0 a 1.0
+  temperatura: number;   // °C
+  umidade: number;       // %
+  dataLeitura: string;   // ISO date string
+}
+
+export interface Alerta {
+  id: number;
+  propriedadeId: number;
+  tipo: 'SECA' | 'PRAGA' | 'EXCESSO_CHUVA' | 'NDVI_BAIXO';
+  descricao: string;
+  nivel: 'BAIXO' | 'MEDIO' | 'ALTO';
+  ativo: boolean;
+  createdAt: string;
+}
+
+export type RiscoNivel = 'BAIXO' | 'MÉDIO' | 'ALTO';
+
+// Navigation param lists
+export type RootStackParamList = {
+  Login:       undefined;
+  MainTabs:    undefined;
+};
+
+export type TabParamList = {
+  Dashboard:    undefined;
+  Propriedades: undefined;
+  Alertas:      undefined;
+  Perfil:       undefined;
+};
+
+export type PropriedadesStackParamList = {
+  ListaPropriedades:    undefined;
+  DetalhesPropriedade:  { propriedadeId: number; nome: string };
+  FormPropriedade:      { propriedade?: Propriedade };
+};
+
+// API response wrappers
+export interface ApiResponse<T> {
+  data: T;
+  message?: string;
+  success: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+// src/services/api.ts
+import axios, { AxiosInstance, AxiosError } from 'axios';
+import { Propriedade, LeituraSatelital, Alerta, Produtor } from '../types';
+
+// ⚠️  ALTERE AQUI: URL base da sua API C# (.NET)
+// Para emulador Android: http://10.0.2.2:5000/api
+// Para dispositivo físico: http://SEU_IP_LOCAL:5000/api
+// Para produção: https://sua-api.azurewebsites.net/api
+const BASE_URL = 'http://10.0.2.2:5000/api';
+
+const api: AxiosInstance = axios.create({
+  baseURL: BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// ── Interceptors ──────────────────────────────────────────────────────────────
+
+api.interceptors.request.use(
+  (config) => {
+    // Se sua API usar JWT: descomente e salve o token em AsyncStorage
+    // const token = await AsyncStorage.getItem('token');
+    // if (token) config.headers.Authorization = `Bearer ${token}`;
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    const msg =
+      (error.response?.data as any)?.message ||
+      error.message ||
+      'Erro de conexão com o servidor';
+    return Promise.reject(new Error(msg));
+  }
+);
+
+// ── Produtores ────────────────────────────────────────────────────────────────
+
+export const produtorService = {
+  login: (email: string, senha: string) =>
+    api.post<{ token: string; produtor: Produtor }>('/auth/login', { email, senha }),
+
+  getById: (id: number) =>
+    api.get<Produtor>(`/produtores/${id}`),
+
+  create: (data: Omit<Produtor, 'id' | 'createdAt'> & { senha: string }) =>
+    api.post<Produtor>('/produtores', data),
+
+  update: (id: number, data: Partial<Produtor>) =>
+    api.put<Produtor>(`/produtores/${id}`, data),
+};
+
+// ── Propriedades ──────────────────────────────────────────────────────────────
+
+export const propriedadeService = {
+  // ⚠️  ROTA: GET /api/propriedades?produtorId={id}
+  listar: (produtorId: number) =>
+    api.get<Propriedade[]>('/propriedades', { params: { produtorId } }),
+
+  // ⚠️  ROTA: GET /api/propriedades/{id}
+  getById: (id: number) =>
+    api.get<Propriedade>(`/propriedades/${id}`),
+
+  // ⚠️  ROTA: POST /api/propriedades
+  criar: (data: Omit<Propriedade, 'id' | 'createdAt'>) =>
+    api.post<Propriedade>('/propriedades', data),
+
+  // ⚠️  ROTA: PUT /api/propriedades/{id}
+  atualizar: (id: number, data: Partial<Propriedade>) =>
+    api.put<Propriedade>(`/propriedades/${id}`, data),
+
+  // ⚠️  ROTA: DELETE /api/propriedades/{id}
+  deletar: (id: number) =>
+    api.delete(`/propriedades/${id}`),
+};
+
+// ── Leituras Satelitais ───────────────────────────────────────────────────────
+
+export const leituraService = {
+  // ⚠️  ROTA: GET /api/leituras?propriedadeId={id}&limit=30
+  listar: (propriedadeId: number, limit = 30) =>
+    api.get<LeituraSatelital[]>('/leituras', { params: { propriedadeId, limit } }),
+
+  // ⚠️  ROTA: GET /api/leituras/ultima/{propriedadeId}
+  getUltima: (propriedadeId: number) =>
+    api.get<LeituraSatelital>(`/leituras/ultima/${propriedadeId}`),
+
+  // ⚠️  ROTA: GET /api/leituras/dashboard — retorna última leitura de todas as propriedades do produtor
+  getDashboard: (produtorId: number) =>
+    api.get<{ propriedadeId: number; nome: string; leitura: LeituraSatelital; risco: string }[]>(
+      '/leituras/dashboard',
+      { params: { produtorId } }
+    ),
+};
+
+// ── Alertas ───────────────────────────────────────────────────────────────────
+
+export const alertaService = {
+  // ⚠️  ROTA: GET /api/alertas?produtorId={id}&ativo=true
+  listar: (produtorId: number, apenasAtivos = true) =>
+    api.get<Alerta[]>('/alertas', { params: { produtorId, ativo: apenasAtivos } }),
+
+  // ⚠️  ROTA: PUT /api/alertas/{id}/resolver
+  resolver: (id: number) =>
+    api.put(`/alertas/${id}/resolver`),
+};
+
+export default api;
+// src/navigation/AppNavigator.tsx
+import React, { useState } from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet } from 'react-native';
+import { Colors } from '../theme/colors';
+
+// Screens
+import LoginScreen from '../screens/LoginScreen';
+import DashboardScreen from '../screens/DashboardScreen';
+import PropriedadesScreen from '../screens/PropriedadesScreen';
+import DetalhesPropriedadeScreen from '../screens/DetalhesPropriedadeScreen';
+import FormPropriedadeScreen from '../screens/FormPropriedadeScreen';
+import AlertasScreen from '../screens/AlertasScreen';
+
+const Stack = createNativeStackNavigator();
+const Tab   = createBottomTabNavigator();
+
+// ── Custom Tab Bar Label ──────────────────────────────────────────────────────
+function TabLabel({ label, focused }: { label: string; focused: boolean }) {
+  return (
+    <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
+      {label}
+    </Text>
+  );
+}
+
+// ── Propriedades Stack (tela lista + detalhes + form) ────────────────────────
+function PropriedadesStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ListaPropriedades"   component={PropriedadesScreen} />
+      <Stack.Screen name="DetalhesPropriedade" component={DetalhesPropriedadeScreen} />
+      <Stack.Screen name="FormPropriedade"     component={FormPropriedadeScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// ── Main Tabs ─────────────────────────────────────────────────────────────────
+function MainTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: styles.tabBar,
+        tabBarActiveTintColor:   Colors.primary,
+        tabBarInactiveTintColor: Colors.textMuted,
+      }}
+    >
+      <Tab.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{
+          tabBarLabel: ({ focused }) => <TabLabel label="Dashboard" focused={focused} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="planet-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Propriedades"
+        component={PropriedadesStack}
+        options={{
+          tabBarLabel: ({ focused }) => <TabLabel label="Fazendas" focused={focused} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="leaf-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Alertas"
+        component={AlertasScreen}
+        options={{
+          tabBarLabel: ({ focused }) => <TabLabel label="Alertas" focused={focused} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="warning-outline" color={color} size={size} />
+          ),
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+// ── Root Navigator ────────────────────────────────────────────────────────────
+export default function AppNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Login"    component={LoginScreen} />
+      <Stack.Screen name="MainTabs" component={MainTabs} />
+    </Stack.Navigator>
+  );
+}
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: Colors.bgCard,
+    borderTopColor:  Colors.border,
+    borderTopWidth:  1,
+    height:          64,
+    paddingBottom:   8,
+    paddingTop:      6,
+  },
+  tabLabel: {
+    fontSize:   10,
+    color:      Colors.textMuted,
+    marginTop:  2,
+  },
+  tabLabelActive: {
+    color: Colors.primary,
+  },
+});
+
+// src/components/index.tsx
 import React from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
   StyleSheet, ViewStyle, TextStyle,
 } from 'react-native';
-import { Colors, Radius, Spacing } from '../styles/colors';
+import { Colors, Radius, Spacing } from '../theme/colors';
 import type { RiscoNivel } from '../types';
 
 // ── Risco Indicator (verde / amarelo / vermelho) ──────────────────────────────
@@ -252,329 +615,249 @@ export function LoadingOverlay() {
 const loadStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg, justifyContent: 'center', alignItems: 'center', gap: 16 },
   text:      { color: Colors.textSecondary, fontSize: 14 },
-});  esse app anvigation // src/navigation/AppNavigator.tsx
+});
+
+// src/screens/LoginScreen.tsx
 import React, { useState } from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
-import { View, Text, StyleSheet } from 'react-native';
-import { Colors } from '../styles/colors';
-
-// Screens
-import LoginScreen from '../screens/LoginScreen';
-import DashboardScreen from '../screens/Dashboardscreen';
-import PropriedadesScreen from '../screens/Propriedadesscreen';
-import DetalhesPropriedadeScreen from '../screens/Detalhespropriedadescreen';
-import FormPropriedadeScreen from '../screens/Formpropriedadescreen';
-import AlertasScreen from '../screens/Alertasscreen';
-
-const Stack = createNativeStackNavigator();
-const Tab   = createBottomTabNavigator();
-
-// ── Custom Tab Bar Label ──────────────────────────────────────────────────────
-function TabLabel({ label, focused }: { label: string; focused: boolean }) {
-  return (
-    <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
-      {label}
-    </Text>
-  );
-}
-
-// ── Propriedades Stack (tela lista + detalhes + form) ────────────────────────
-function PropriedadesStack() {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ListaPropriedades"   component={PropriedadesScreen} />
-      <Stack.Screen name="DetalhesPropriedade" component={DetalhesPropriedadeScreen} />
-      <Stack.Screen name="FormPropriedade"     component={FormPropriedadeScreen} />
-    </Stack.Navigator>
-  );
-}
-
-// ── Main Tabs ─────────────────────────────────────────────────────────────────
-function MainTabs() {
-  return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor:   Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
-      }}
-    >
-      <Tab.Screen
-        name="Dashboard"
-        component={DashboardScreen}
-        options={{
-          tabBarLabel: ({ focused }) => <TabLabel label="Dashboard" focused={focused} />,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="planet-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Propriedades"
-        component={PropriedadesStack}
-        options={{
-          tabBarLabel: ({ focused }) => <TabLabel label="Fazendas" focused={focused} />,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="leaf-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Alertas"
-        component={AlertasScreen}
-        options={{
-          tabBarLabel: ({ focused }) => <TabLabel label="Alertas" focused={focused} />,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="warning-outline" color={color} size={size} />
-          ),
-        }}
-      />
-    </Tab.Navigator>
-  );
-}
-
-// ── Root Navigator ────────────────────────────────────────────────────────────
-export default function AppNavigator() {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Login"    component={LoginScreen} />
-      <Stack.Screen name="MainTabs" component={MainTabs} />
-    </Stack.Navigator>
-  );
-}
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: Colors.bgCard,
-    borderTopColor:  Colors.border,
-    borderTopWidth:  1,
-    height:          64,
-    paddingBottom:   8,
-    paddingTop:      6,
-  },
-  tabLabel: {
-    fontSize:   10,
-    color:      Colors.textMuted,
-    marginTop:  2,
-  },
-  tabLabelActive: {
-    color: Colors.primary,
-  },
-});  eesse alerta scren // src/screens/AlertasScreen.tsx
-import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity,
-  StyleSheet, SafeAreaView, RefreshControl, Alert,
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, SafeAreaView, Alert, KeyboardAvoidingView,
+  Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
-import { Colors, Spacing, Radius } from '../styles/colors';
-import { alertaService } from '../services/api';
-import { Alerta } from '../types';
-import { ScreenHeader, LoadingOverlay, EmptyState } from '../components';
+import { Colors, Spacing, Radius } from '../theme/colors';
+import { produtorService } from '../services/api';
 
-// ── Mock ──────────────────────────────────────────────────────────────────────
-const MOCK_ALERTAS: Alerta[] = [
-  { id: 1, propriedadeId: 2, tipo: 'NDVI_BAIXO',    descricao: 'NDVI abaixo de 0.3 detectado na propriedade Sítio Estrela. Possível déficit hídrico ou ataque de pragas.',   nivel: 'ALTO',  ativo: true, createdAt: new Date().toISOString() },
-  { id: 2, propriedadeId: 2, tipo: 'SECA',          descricao: 'Umidade do solo em 28% no Sítio Estrela. Recomenda-se irrigação imediata.',                                    nivel: 'ALTO',  ativo: true, createdAt: new Date(Date.now() - 3600_000).toISOString() },
-  { id: 3, propriedadeId: 3, tipo: 'PRAGA',         descricao: 'Índice NDVI com padrão irregular no Rancho Verde. Suspeita de infestação na área leste.',                       nivel: 'MEDIO', ativo: true, createdAt: new Date(Date.now() - 86_400_000).toISOString() },
-  { id: 4, propriedadeId: 1, tipo: 'EXCESSO_CHUVA', descricao: 'Umidade acima de 90% na Fazenda São João. Risco de encharcamento nas zonas baixas.',                           nivel: 'BAIXO', ativo: true, createdAt: new Date(Date.now() - 2 * 86_400_000).toISOString() },
-];
+export default function LoginScreen({ navigation }: any) {
+  const [email,   setEmail]   = useState('');
+  const [senha,   setSenha]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errors,  setErrors]  = useState<{ email?: string; senha?: string }>({});
+  const [showPass, setShowPass] = useState(false);
 
-const TIPO_ICON: Record<string, string>  = { NDVI_BAIXO: '🌿', SECA: '🔥', PRAGA: '🐛', EXCESSO_CHUVA: '🌊' };
-const TIPO_LABEL: Record<string, string> = { NDVI_BAIXO: 'NDVI Baixo', SECA: 'Seca', PRAGA: 'Praga', EXCESSO_CHUVA: 'Excesso Chuva' };
-const NIVEL_COLOR: Record<string, string> = { ALTO: Colors.accentRed, MEDIO: Colors.accent, BAIXO: Colors.primary };
+  function validate(): boolean {
+    const e: typeof errors = {};
+    if (!email.trim())                    e.email = 'E-mail obrigatório';
+    else if (!email.includes('@'))        e.email = 'E-mail inválido';
+    if (!senha || senha.length < 4)       e.senha = 'Senha deve ter ao menos 4 caracteres';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
 
-// ── Filtro chips ──────────────────────────────────────────────────────────────
-type Filtro = 'TODOS' | 'ALTO' | 'MEDIO' | 'BAIXO';
-
-function FilterChips({ active, onChange }: { active: Filtro; onChange: (f: Filtro) => void }) {
-  const opts: { key: Filtro; label: string; color: string }[] = [
-    { key: 'TODOS', label: 'Todos',  color: Colors.textSecondary },
-    { key: 'ALTO',  label: '🔴 Alto',  color: Colors.accentRed },
-    { key: 'MEDIO', label: '🟡 Médio', color: Colors.accent },
-    { key: 'BAIXO', label: '🟢 Baixo', color: Colors.primary },
-  ];
-  return (
-    <View style={filterStyles.row}>
-      {opts.map(o => (
-        <TouchableOpacity
-          key={o.key}
-          style={[filterStyles.chip, active === o.key && { borderColor: o.color, backgroundColor: `${o.color}18` }]}
-          onPress={() => onChange(o.key)}
-        >
-          <Text style={[filterStyles.chipText, active === o.key && { color: o.color, fontWeight: '700' }]}>{o.label}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
-const filterStyles = StyleSheet.create({
-  row:      { flexDirection: 'row', gap: 8, paddingHorizontal: Spacing.lg, marginBottom: Spacing.md, flexWrap: 'wrap' },
-  chip:     { borderRadius: Radius.full, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.bgCard },
-  chipText: { fontSize: 12, color: Colors.textSecondary },
-});
-
-// ── Card de alerta ────────────────────────────────────────────────────────────
-function AlertaItem({ alerta, onResolve }: { alerta: Alerta; onResolve: (id: number) => void }) {
-  const color = NIVEL_COLOR[alerta.nivel] ?? Colors.primary;
-  const ago   = () => {
-    const diff = Date.now() - new Date(alerta.createdAt).getTime();
-    const h = Math.floor(diff / 3_600_000);
-    if (h < 1) return 'Agora há pouco';
-    if (h < 24) return `Há ${h}h`;
-    return `Há ${Math.floor(h / 24)} dia${Math.floor(h / 24) > 1 ? 's' : ''}`;
-  };
-
-  return (
-    <View style={[itemStyles.card, { borderLeftColor: color }]}>
-      {/* Header */}
-      <View style={itemStyles.header}>
-        <View style={[itemStyles.iconBox, { backgroundColor: `${color}18` }]}>
-          <Text style={itemStyles.icon}>{TIPO_ICON[alerta.tipo] ?? '⚠️'}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <View style={itemStyles.titleRow}>
-            <Text style={itemStyles.tipo}>{TIPO_LABEL[alerta.tipo] ?? alerta.tipo}</Text>
-            <View style={[itemStyles.nivelBadge, { backgroundColor: `${color}22`, borderColor: color }]}>
-              <Text style={[itemStyles.nivelText, { color }]}>{alerta.nivel}</Text>
-            </View>
-          </View>
-          <Text style={itemStyles.ago}>{ago()}</Text>
-        </View>
-      </View>
-
-      {/* Descrição */}
-      <Text style={itemStyles.desc}>{alerta.descricao}</Text>
-
-      {/* Ações */}
-      <View style={itemStyles.actions}>
-        <TouchableOpacity
-          style={[itemStyles.resolveBtn, { borderColor: color }]}
-          onPress={() => onResolve(alerta.id)}
-        >
-          <Text style={[itemStyles.resolveText, { color }]}>✓ Marcar como resolvido</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
-const itemStyles = StyleSheet.create({
-  card:        { backgroundColor: Colors.bgCard, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.sm, borderLeftWidth: 4, borderWidth: 1, borderColor: Colors.border },
-  header:      { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
-  iconBox:     { width: 44, height: 44, borderRadius: Radius.sm, justifyContent: 'center', alignItems: 'center' },
-  icon:        { fontSize: 22 },
-  titleRow:    { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  tipo:        { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
-  nivelBadge:  { borderRadius: Radius.full, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1 },
-  nivelText:   { fontSize: 10, fontWeight: '700', letterSpacing: 0.8 },
-  ago:         { fontSize: 11, color: Colors.textMuted, marginTop: 3 },
-  desc:        { fontSize: 13, color: Colors.textSecondary, lineHeight: 19, marginBottom: Spacing.sm },
-  actions:     { borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: Spacing.sm },
-  resolveBtn:  { alignSelf: 'flex-start', borderWidth: 1, borderRadius: Radius.sm, paddingHorizontal: 12, paddingVertical: 5 },
-  resolveText: { fontSize: 12, fontWeight: '700' },
-});
-
-// ── Tela principal ────────────────────────────────────────────────────────────
-export default function AlertasScreen({ navigation }: any) {
-  const [alertas,    setAlertas]    = useState<Alerta[]>([]);
-  const [filtro,     setFiltro]     = useState<Filtro>('TODOS');
-  const [loading,    setLoading]    = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+  async function handleLogin() {
+    if (!validate()) return;
+    setLoading(true);
     try {
-      // ⚠️  Substitua 1 pelo id do produtor logado
-      const res = await alertaService.listar(1);
-      setAlertas(res.data);
-    } catch {
-      setAlertas(MOCK_ALERTAS);
+      await produtorService.login(email.trim(), senha);
+      // ⚠️  Aqui você pode salvar o token JWT retornado:
+      // await AsyncStorage.setItem('token', response.data.token);
+      navigation.replace('MainTabs');
+    } catch (err: any) {
+      Alert.alert('Falha no login', err.message || 'Credenciais incorretas. Tente novamente.');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const handleResolve = (id: number) => {
-    Alert.alert('Resolver alerta', 'Confirma que este alerta foi tratado?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Confirmar', onPress: async () => {
-          try {
-            await alertaService.resolver(id);
-          } catch { /* silencioso */ }
-          setAlertas(prev => prev.filter(a => a.id !== id));
-        },
-      },
-    ]);
-  };
-
-  const filtered = filtro === 'TODOS'
-    ? alertas
-    : alertas.filter(a => a.nivel === filtro);
-
-  const altoCount = alertas.filter(a => a.nivel === 'ALTO').length;
-
-  if (loading) return <LoadingOverlay />;
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenHeader
-        title="Alertas"
-        subtitle={alertas.length > 0 ? `${alertas.length} ativo${alertas.length > 1 ? 's' : ''}` : 'Tudo tranquilo'}
-      />
+      {/* ── Background decorativo ── */}
+      <View style={styles.bgCircle1} />
+      <View style={styles.bgCircle2} />
+      <View style={styles.bgDot1} />
 
-      {altoCount > 0 && (
-        <View style={styles.urgentBanner}>
-          <Text style={styles.urgentText}>🚨 {altoCount} alerta{altoCount > 1 ? 's' : ''} de risco ALTO — ação necessária!</Text>
-        </View>
-      )}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.kav}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── Logo / Marca ── */}
+          <View style={styles.logoBlock}>
+            <View style={styles.logoIcon}>
+              <Text style={styles.logoEmoji}>🛰️</Text>
+            </View>
+            <Text style={styles.appName}>AstroFarm</Text>
+            <Text style={styles.tagline}>Monitoramento Agrícola via Satélite</Text>
+          </View>
 
-      <FilterChips active={filtro} onChange={setFiltro} />
+          {/* ── Card de login ── */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Entrar na plataforma</Text>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={item => item.id.toString()}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); load(true); }}
-            tintColor={Colors.primary}
-          />
-        }
-        ListEmptyComponent={
-          <EmptyState
-            message={filtro === 'TODOS' ? 'Nenhum alerta ativo. Sua lavoura está bem! 🌱' : `Sem alertas de nível ${filtro}.`}
-            icon={filtro === 'TODOS' ? '✅' : '🔍'}
-          />
-        }
-        renderItem={({ item }) => (
-          <AlertaItem alerta={item} onResolve={handleResolve} />
-        )}
-      />
+            {/* E-mail */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>E-mail</Text>
+              <View style={[styles.inputBox, errors.email ? styles.inputError : null]}>
+                <Text style={styles.inputIcon}>✉</Text>
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="seu@email.com"
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+            </View>
+
+            {/* Senha */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Senha</Text>
+              <View style={[styles.inputBox, errors.senha ? styles.inputError : null]}>
+                <Text style={styles.inputIcon}>🔒</Text>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={senha}
+                  onChangeText={setSenha}
+                  placeholder="••••••••"
+                  placeholderTextColor={Colors.textMuted}
+                  secureTextEntry={!showPass}
+                />
+                <TouchableOpacity onPress={() => setShowPass(v => !v)} style={styles.eyeBtn}>
+                  <Text style={styles.eyeIcon}>{showPass ? '🙈' : '👁️'}</Text>
+                </TouchableOpacity>
+              </View>
+              {errors.senha ? <Text style={styles.errorText}>{errors.senha}</Text> : null}
+            </View>
+
+            {/* Botão login */}
+            <TouchableOpacity
+              style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading
+                ? <ActivityIndicator color={Colors.bg} size="small" />
+                : <Text style={styles.loginBtnText}>Acessar →</Text>
+              }
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>ou</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Demo / dev shortcut */}
+            <TouchableOpacity
+              style={styles.demoBtn}
+              onPress={() => navigation.replace('MainTabs')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.demoBtnText}>Entrar sem API (demonstração)</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Rodapé ── */}
+          <Text style={styles.footer}>
+            AstroFarm © 2026 · ODS 2 · ODS 13
+          </Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe:          { flex: 1, backgroundColor: Colors.bg },
-  urgentBanner:  { marginHorizontal: Spacing.lg, marginBottom: Spacing.sm, backgroundColor: 'rgba(231,76,60,0.12)', borderRadius: Radius.md, padding: Spacing.sm, borderWidth: 1, borderColor: Colors.accentRed },
-  urgentText:    { fontSize: 13, color: Colors.accentRed, fontWeight: '600', textAlign: 'center' },
-  list:          { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xl },
-});   umd dashboard screen // src/screens/DashboardScreen.tsx
+  safe:  { flex: 1, backgroundColor: Colors.bg },
+  kav:   { flex: 1 },
+  scroll: { flexGrow: 1, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xl },
+
+  // Decorações de fundo
+  bgCircle1: {
+    position: 'absolute', top: -80, right: -80,
+    width: 260, height: 260, borderRadius: 130,
+    backgroundColor: Colors.primaryGlow,
+  },
+  bgCircle2: {
+    position: 'absolute', bottom: 60, left: -100,
+    width: 200, height: 200, borderRadius: 100,
+    backgroundColor: 'rgba(52,152,219,0.08)',
+  },
+  bgDot1: {
+    position: 'absolute', top: 180, left: 30,
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: Colors.primary, opacity: 0.6,
+  },
+
+  // Logo
+  logoBlock:  { alignItems: 'center', paddingTop: 56, marginBottom: Spacing.xl },
+  logoIcon:   {
+    width: 72, height: 72, borderRadius: 20,
+    backgroundColor: Colors.bgCard,
+    borderWidth: 1.5, borderColor: Colors.border,
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: 14,
+    shadowColor: Colors.primary, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
+  },
+  logoEmoji:  { fontSize: 36 },
+  appName:    { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, letterSpacing: 1 },
+  tagline:    { fontSize: 13, color: Colors.textSecondary, marginTop: 6, textAlign: 'center' },
+
+  // Card
+  card:       {
+    backgroundColor: Colors.bgCard,
+    borderRadius: Radius.xl,
+    padding: Spacing.lg,
+    borderWidth: 1, borderColor: Colors.border,
+    marginBottom: Spacing.xl,
+    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 16, elevation: 8,
+  },
+  cardTitle:  { fontSize: 17, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.lg },
+
+  // Fields
+  fieldGroup: { marginBottom: Spacing.md },
+  label:      { fontSize: 12, color: Colors.textSecondary, marginBottom: 6, fontWeight: '600', letterSpacing: 0.5 },
+  inputBox:   {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.bgSurface,
+    borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border,
+    paddingHorizontal: Spacing.md, gap: Spacing.sm,
+  },
+  inputError: { borderColor: Colors.accentRed },
+  inputIcon:  { fontSize: 14 },
+  input:      { color: Colors.textPrimary, fontSize: 15, paddingVertical: 13 },
+  eyeBtn:     { padding: 4 },
+  eyeIcon:    { fontSize: 16 },
+  errorText:  { fontSize: 11, color: Colors.accentRed, marginTop: 4 },
+
+  // Botões
+  loginBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.md,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    shadowColor: Colors.primary, shadowOpacity: 0.4, shadowRadius: 10, elevation: 5,
+  },
+  loginBtnDisabled: { opacity: 0.6 },
+  loginBtnText:     { fontSize: 16, fontWeight: '800', color: Colors.bg, letterSpacing: 0.5 },
+
+  divider:     { flexDirection: 'row', alignItems: 'center', marginVertical: Spacing.md, gap: Spacing.sm },
+  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+  dividerText: { color: Colors.textMuted, fontSize: 12 },
+
+  demoBtn:     { borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, paddingVertical: 12, alignItems: 'center' },
+  demoBtnText: { color: Colors.textSecondary, fontSize: 13 },
+
+  footer: { textAlign: 'center', color: Colors.textMuted, fontSize: 11, marginTop: 'auto' },
+});
+
+// src/screens/DashboardScreen.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, SafeAreaView, RefreshControl, Alert,
 } from 'react-native';
-import { Colors, Spacing, Radius } from '../styles/colors';
+import { Colors, Spacing, Radius } from '../theme/colors';
 import { leituraService } from '../services/api';
 import { RiscoIndicator, StatCard, LoadingOverlay, EmptyState } from '../components';
 
@@ -810,96 +1093,208 @@ const styles = StyleSheet.create({
   legendItem:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
   legendDot:    { width: 8, height: 8, borderRadius: 4 },
   legendLabel:  { fontSize: 11, color: Colors.textMuted, flex: 1 },
-}); Detalher propriedadScreen import React, { useEffect, useState, useCallback } from 'react';
+});
+// src/screens/PropriedadesScreen.tsx
+import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  RefreshControl,
+  View, Text, FlatList, TouchableOpacity,
+  StyleSheet, SafeAreaView, Alert, RefreshControl,
 } from 'react-native';
+import { Colors, Spacing, Radius } from '../theme/colors';
+import { propriedadeService } from '../services/api';
+import { Propriedade } from '../types';
+import { EmptyState, LoadingOverlay, ScreenHeader } from '../components';
 
-import { Colors, Spacing, Radius } from '../styles/colors';
+// ── Mock ──────────────────────────────────────────────────────────────────────
+const MOCK: Propriedade[] = [
+  { id: 1, nome: 'Fazenda São João',  localizacao: 'Ribeirão Preto, SP', cultura: 'Soja',  areaHectares: 320, produtorId: 1 },
+  { id: 2, nome: 'Sítio Estrela',     localizacao: 'Londrina, PR',       cultura: 'Milho', areaHectares: 85,  produtorId: 1 },
+  { id: 3, nome: 'Rancho Verde',      localizacao: 'Uberaba, MG',        cultura: 'Café',  areaHectares: 40,  produtorId: 1 },
+];
+
+const CULTURA_ICON: Record<string, string> = {
+  Soja: '🌱', Milho: '🌽', Café: '☕', Arroz: '🍚', Cana: '🎋',
+};
+
+function PropCard({ item, onPress, onDelete }: { item: Propriedade; onPress: () => void; onDelete: () => void }) {
+  return (
+    <TouchableOpacity style={cardStyles.card} onPress={onPress} activeOpacity={0.8}>
+      <View style={cardStyles.header}>
+        <View style={cardStyles.iconBox}>
+          <Text style={cardStyles.icon}>{CULTURA_ICON[item.cultura] ?? '🌾'}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={cardStyles.nome}>{item.nome}</Text>
+          <Text style={cardStyles.loc}>📍 {item.localizacao}</Text>
+        </View>
+        <TouchableOpacity
+          onPress={onDelete}
+          style={cardStyles.deleteBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={cardStyles.deleteIcon}>🗑</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={cardStyles.footer}>
+        <View style={cardStyles.pill}>
+          <Text style={cardStyles.pillText}>{item.cultura}</Text>
+        </View>
+        <Text style={cardStyles.area}>{item.areaHectares} ha</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const cardStyles = StyleSheet.create({
+  card:       { backgroundColor: Colors.bgCard, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.border },
+  header:     { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, marginBottom: Spacing.sm },
+  iconBox:    { width: 42, height: 42, borderRadius: Radius.sm, backgroundColor: Colors.bgSurface, justifyContent: 'center', alignItems: 'center' },
+  icon:       { fontSize: 20 },
+  nome:       { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
+  loc:        { fontSize: 12, color: Colors.textSecondary, marginTop: 3 },
+  deleteBtn:  { padding: 4 },
+  deleteIcon: { fontSize: 16 },
+  footer:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  pill:       { backgroundColor: Colors.primaryGlow, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 3 },
+  pillText:   { fontSize: 11, color: Colors.primary, fontWeight: '600' },
+  area:       { fontSize: 13, color: Colors.textSecondary },
+});
+
+// ── Tela principal ────────────────────────────────────────────────────────────
+export default function PropriedadesScreen({ navigation }: any) {
+  const [itens,      setItens]      = useState<Propriedade[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      // ⚠️  Substitua 1 pelo id do produtor logado
+      const res = await propriedadeService.listar(1);
+      setItens(res.data);
+    } catch {
+      setItens(MOCK);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleDelete = (item: Propriedade) => {
+    Alert.alert(
+      'Remover propriedade',
+      `Deseja remover "${item.nome}"? Todas as leituras vinculadas também serão excluídas.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await propriedadeService.deletar(item.id);
+              setItens(prev => prev.filter(p => p.id !== item.id));
+            } catch (err: any) {
+              Alert.alert('Erro', err.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  if (loading) return <LoadingOverlay />;
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <ScreenHeader
+        title="Minhas Fazendas"
+        subtitle={`${itens.length} propriedade${itens.length !== 1 ? 's' : ''} cadastrada${itens.length !== 1 ? 's' : ''}`}
+        right={
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => navigation.navigate('FormPropriedade', { propriedade: undefined })}
+          >
+            <Text style={styles.addIcon}>＋</Text>
+          </TouchableOpacity>
+        }
+      />
+
+      <FlatList
+        data={itens}
+        keyExtractor={item => item.id.toString()}
+        contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={Colors.primary} />
+        }
+        ListEmptyComponent={
+          <EmptyState
+            message="Nenhuma fazenda cadastrada ainda.\nToque em ＋ para adicionar."
+            icon="🌾"
+          />
+        }
+        renderItem={({ item }) => (
+          <PropCard
+            item={item}
+            onPress={() => navigation.navigate('DetalhesPropriedade', { propriedadeId: item.id, nome: item.nome })}
+            onDelete={() => handleDelete(item)}
+          />
+        )}
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe:   { flex: 1, backgroundColor: Colors.bg },
+  list:   { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xl },
+  addBtn: {
+    width: 38, height: 38, borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  addIcon: { fontSize: 20, color: Colors.bg, fontWeight: '700', marginTop: -1 },
+});
+// src/screens/DetalhesPropriedadeScreen.tsx
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity,
+  StyleSheet, SafeAreaView, RefreshControl,
+} from 'react-native';
+import { Colors, Spacing, Radius } from '../theme/colors';
 import { leituraService, alertaService } from '../services/api';
 import { LeituraSatelital, Alerta } from '../types';
-import {
-  RiscoIndicator,
-  StatCard,
-  ScreenHeader,
-  LoadingOverlay,
-} from '../components';
+import { RiscoIndicator, StatCard, ScreenHeader, LoadingOverlay } from '../components';
 
+// ── Mock ──────────────────────────────────────────────────────────────────────
 const genMockLeituras = (propId: number): LeituraSatelital[] =>
   Array.from({ length: 7 }, (_, i) => ({
     id: i + 1,
     propriedadeId: propId,
-    ndvi: parseFloat((0.4 + Math.random() * 0.45).toFixed(2)),
+    ndvi:        parseFloat((0.4 + Math.random() * 0.45).toFixed(2)),
     temperatura: Math.round(24 + Math.random() * 12),
-    umidade: Math.round(40 + Math.random() * 40),
-    dataLeitura: new Date(
-      Date.now() - i * 86_400_000
-    ).toISOString(),
+    umidade:     Math.round(40 + Math.random() * 40),
+    dataLeitura: new Date(Date.now() - i * 86_400_000).toISOString(),
   }));
 
 const genMockAlertas = (propId: number): Alerta[] => [
-  {
-    id: 1,
-    propriedadeId: propId,
-    tipo: 'NDVI_BAIXO',
-    descricao: 'NDVI abaixo de 0.3 detectado na área norte.',
-    nivel: 'ALTO',
-    ativo: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    propriedadeId: propId,
-    tipo: 'SECA',
-    descricao: 'Umidade do solo abaixo de 35% há 3 dias.',
-    nivel: 'MEDIO',
-    ativo: true,
-    createdAt: new Date(Date.now() - 86_400_000).toISOString(),
-  },
+  { id: 1, propriedadeId: propId, tipo: 'NDVI_BAIXO', descricao: 'NDVI abaixo de 0.3 detectado na área norte.', nivel: 'ALTO', ativo: true, createdAt: new Date().toISOString() },
+  { id: 2, propriedadeId: propId, tipo: 'SECA',       descricao: 'Umidade do solo abaixo de 35% há 3 dias.',  nivel: 'MEDIO', ativo: true, createdAt: new Date(Date.now() - 86_400_000).toISOString() },
 ];
 
-function MiniBarChart({
-  data,
-  label,
-  unit,
-  color,
-}: {
-  data: number[];
-  label: string;
-  unit: string;
-  color: string;
-}) {
-  const max = Math.max(...data, 1);
-  const min = Math.min(...data);
-
+// ── Gráfico de barras simples ─────────────────────────────────────────────────
+function MiniBarChart({ data, label, unit, color }: { data: number[]; label: string; unit: string; color: string }) {
+  const max  = Math.max(...data, 1);
+  const min  = Math.min(...data);
   return (
     <View style={chartStyles.container}>
       <Text style={chartStyles.title}>{label}</Text>
-
       <View style={chartStyles.bars}>
         {data.map((v, i) => (
           <View key={i} style={chartStyles.barWrap}>
-            <Text style={chartStyles.barVal}>
-              {v}
-              {unit}
-            </Text>
-
-            <View
-              style={[
-                chartStyles.bar,
-                {
-                  height:
-                    (60 * (v - min)) / (max - min + 1) + 8,
-                  backgroundColor: color,
-                },
-              ]}
-            />
+            <Text style={chartStyles.barVal}>{v}{unit}</Text>
+            <View style={[chartStyles.bar, { height: 60 * (v - min) / (max - min + 1) + 8, backgroundColor: color }]} />
           </View>
         ))}
       </View>
@@ -908,107 +1303,29 @@ function MiniBarChart({
 }
 
 const chartStyles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.bgSurface,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-
-  title: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-
-  bars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    height: 80,
-  },
-
-  barWrap: {
-    alignItems: 'center',
-    flex: 1,
-    gap: 4,
-  },
-
-  barVal: {
-    fontSize: 9,
-    color: Colors.textMuted,
-  },
-
-  bar: {
-    width: '60%',
-    borderRadius: 3,
-    minHeight: 8,
-  },
+  container: { backgroundColor: Colors.bgSurface, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.sm },
+  title:     { fontSize: 12, color: Colors.textSecondary, marginBottom: Spacing.sm, fontWeight: '600', letterSpacing: 0.5 },
+  bars:      { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 80 },
+  barWrap:   { alignItems: 'center', flex: 1, gap: 4 },
+  barVal:    { fontSize: 9, color: Colors.textMuted },
+  bar:       { width: '60%', borderRadius: 3, minHeight: 8 },
 });
 
-function AlertaCard({
-  alerta,
-  onResolve,
-}: {
-  alerta: Alerta;
-  onResolve: () => void;
-}) {
-  const colors: Record<string, string> = {
-    ALTO: Colors.accentRed,
-    MEDIO: Colors.accent,
-    BAIXO: Colors.primary,
-  };
-
-  const icons: Record<string, string> = {
-    NDVI_BAIXO: '🌿',
-    SECA: '🔥',
-    PRAGA: '🐛',
-    EXCESSO_CHUVA: '🌊',
-  };
-
+// ── Alerta card ───────────────────────────────────────────────────────────────
+function AlertaCard({ alerta, onResolve }: { alerta: Alerta; onResolve: () => void }) {
+  const colors: Record<string, string> = { ALTO: Colors.accentRed, MEDIO: Colors.accent, BAIXO: Colors.primary };
+  const icons:  Record<string, string> = { NDVI_BAIXO: '🌿', SECA: '🔥', PRAGA: '🐛', EXCESSO_CHUVA: '🌊' };
   const c = colors[alerta.nivel] ?? Colors.primary;
-
   return (
-    <View
-      style={[
-        alertCardStyles.card,
-        { borderLeftColor: c },
-      ]}
-    >
+    <View style={[alertCardStyles.card, { borderLeftColor: c }]}>
       <View style={alertCardStyles.row}>
-        <Text style={alertCardStyles.icon}>
-          {icons[alerta.tipo] ?? '⚠️'}
-        </Text>
-
+        <Text style={alertCardStyles.icon}>{icons[alerta.tipo] ?? '⚠️'}</Text>
         <View style={{ flex: 1 }}>
-          <Text style={alertCardStyles.desc}>
-            {alerta.descricao}
-          </Text>
-
-          <Text style={alertCardStyles.date}>
-            {new Date(alerta.createdAt).toLocaleDateString(
-              'pt-BR'
-            )}
-          </Text>
+          <Text style={alertCardStyles.desc}>{alerta.descricao}</Text>
+          <Text style={alertCardStyles.date}>{new Date(alerta.createdAt).toLocaleDateString('pt-BR')}</Text>
         </View>
-
-        <TouchableOpacity
-          onPress={onResolve}
-          style={[
-            alertCardStyles.resolveBtn,
-            { borderColor: c },
-          ]}
-        >
-          <Text
-            style={[
-              alertCardStyles.resolveText,
-              { color: c },
-            ]}
-          >
-            Resolver
-          </Text>
+        <TouchableOpacity onPress={onResolve} style={[alertCardStyles.resolveBtn, { borderColor: c }]}>
+          <Text style={[alertCardStyles.resolveText, { color: c }]}>Resolver</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -1016,147 +1333,63 @@ function AlertaCard({
 }
 
 const alertCardStyles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.bgCard,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-    borderLeftWidth: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-
-  icon: {
-    fontSize: 20,
-  },
-
-  desc: {
-    fontSize: 13,
-    color: Colors.textPrimary,
-    lineHeight: 18,
-    flex: 1,
-  },
-
-  date: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    marginTop: 3,
-  },
-
-  resolveBtn: {
-    borderWidth: 1,
-    borderRadius: Radius.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-
-  resolveText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
+  card:        { backgroundColor: Colors.bgCard, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.sm, borderLeftWidth: 4, borderWidth: 1, borderColor: Colors.border },
+  row:         { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  icon:        { fontSize: 20 },
+  desc:        { fontSize: 13, color: Colors.textPrimary, lineHeight: 18, flex: 1 },
+  date:        { fontSize: 11, color: Colors.textMuted, marginTop: 3 },
+  resolveBtn:  { borderWidth: 1, borderRadius: Radius.sm, paddingHorizontal: 8, paddingVertical: 4 },
+  resolveText: { fontSize: 11, fontWeight: '700' },
 });
 
-export default function DetalhesPropriedadeScreen({
-  route,
-  navigation,
-}: any) {
-  const { propriedadeId, nome } = route.params as {
-    propriedadeId: number;
-    nome: string;
-  };
+// ── Tela principal ────────────────────────────────────────────────────────────
+export default function DetalhesPropriedadeScreen({ route, navigation }: any) {
+  const { propriedadeId, nome } = route.params as { propriedadeId: number; nome: string };
 
-  const [leituras, setLeituras] = useState<
-    LeituraSatelital[]
-  >([]);
+  const [leituras,   setLeituras]   = useState<LeituraSatelital[]>([]);
+  const [alertas,    setAlertas]    = useState<Alerta[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const [lRes, aRes] = await Promise.all([
+        leituraService.listar(propriedadeId, 7),
+        alertaService.listar(1),                // ⚠️  substituir pelo id do produtor
+      ]);
+      setLeituras(lRes.data);
+      setAlertas(aRes.data.filter(a => a.propriedadeId === propriedadeId));
+    } catch {
+      setLeituras(genMockLeituras(propriedadeId));
+      setAlertas(genMockAlertas(propriedadeId));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [propriedadeId]);
 
-  const [loading, setLoading] = useState(true);
-
-  const [refreshing, setRefreshing] =
-    useState(false);
-
-  const load = useCallback(
-    async (silent = false) => {
-      if (!silent) {
-        setLoading(true);
-      }
-
-      try {
-        const [lRes, aRes] = await Promise.all([
-          leituraService.listar(propriedadeId, 7),
-          alertaService.listar(1),
-        ]);
-
-        setLeituras(lRes.data as LeituraSatelital[]);
-
-        setAlertas(
-          (aRes.data as Alerta[]).filter(
-            (a: Alerta) =>
-              a.propriedadeId === propriedadeId
-          )
-        );
-      } catch {
-        setLeituras(
-          genMockLeituras(propriedadeId)
-        );
-
-        setAlertas(
-          genMockAlertas(propriedadeId)
-        );
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [propriedadeId]
-  );
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   const ultima = leituras[0];
 
+  // Calcular risco da última leitura
   let risco = 'BAIXO';
-
   if (ultima) {
-    if (
-      ultima.ndvi < 0.3 ||
-      ultima.umidade < 35
-    ) {
-      risco = 'ALTO';
-    } else if (
-      ultima.ndvi < 0.5 ||
-      ultima.temperatura > 34
-    ) {
-      risco = 'MÉDIO';
-    }
+    if (ultima.ndvi < 0.3 || ultima.umidade < 35) risco = 'ALTO';
+    else if (ultima.ndvi < 0.5 || ultima.temperatura > 34) risco = 'MÉDIO';
   }
 
   const handleResolve = async (id: number) => {
     try {
       await alertaService.resolver(id);
-
-      setAlertas((prev) =>
-        prev.filter((a) => a.id !== id)
-      );
+      setAlertas(prev => prev.filter(a => a.id !== id));
     } catch {
-      setAlertas((prev) =>
-        prev.filter((a) => a.id !== id)
-      );
+      setAlertas(prev => prev.filter(a => a.id !== id)); // otimista
     }
   };
 
-  if (loading) {
-    return <LoadingOverlay />;
-  }
+  if (loading) return <LoadingOverlay />;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -1167,110 +1400,53 @@ export default function DetalhesPropriedadeScreen({
         right={
           <TouchableOpacity
             style={styles.editBtn}
-            onPress={() =>
-              navigation.navigate(
-                'FormPropriedade',
-                {
-                  propriedade: {
-                    id: propriedadeId,
-                    nome,
-                  },
-                }
-              )
-            }
+            onPress={() => navigation.navigate('FormPropriedade', { propriedade: { id: propriedadeId, nome } })}
           >
-            <Text style={styles.editText}>
-              Editar
-            </Text>
+            <Text style={styles.editText}>Editar</Text>
           </TouchableOpacity>
         }
       />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              load(true);
-            }}
-            tintColor={Colors.primary}
-          />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={Colors.primary} />}
       >
+        {/* ── Risco badge ── */}
         <View style={styles.riscoBanner}>
-          <Text style={styles.riscoLabel}>
-            Nível de Risco Atual
-          </Text>
-
-          <RiscoIndicator
-            nivel={risco}
-            size="lg"
-          />
+          <Text style={styles.riscoLabel}>Nível de Risco Atual</Text>
+          <RiscoIndicator nivel={risco} size="lg" />
         </View>
 
+        {/* ── Última leitura ── */}
         {ultima && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Última Leitura Satelital
-            </Text>
-
+            <Text style={styles.sectionTitle}>Última Leitura Satelital</Text>
             <View style={styles.statsGrid}>
-              <StatCard
-                label="NDVI"
-                value={ultima.ndvi.toFixed(2)}
-                accentColor={Colors.primary}
-                style={styles.statItem}
-              />
-
-              <StatCard
-                label="Temperatura"
-                value={ultima.temperatura}
-                unit="°C"
-                accentColor={Colors.accent}
-                style={styles.statItem}
-              />
-
-              <StatCard
-                label="Umidade"
-                value={ultima.umidade}
-                unit="%"
-                accentColor={Colors.accentBlue}
-                style={styles.statItem}
-              />
+              <StatCard label="NDVI"          value={ultima.ndvi.toFixed(2)}  accentColor={Colors.primary}    style={styles.statItem} />
+              <StatCard label="Temperatura"   value={ultima.temperatura}      unit="°C" accentColor={Colors.accent}    style={styles.statItem} />
+              <StatCard label="Umidade"        value={ultima.umidade}          unit="%"  accentColor={Colors.accentBlue} style={styles.statItem} />
             </View>
           </View>
         )}
 
+        {/* ── Histórico gráficos ── */}
         {leituras.length > 1 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Evolução (7 dias)
-            </Text>
-
+            <Text style={styles.sectionTitle}>Evolução (7 dias)</Text>
             <MiniBarChart
-              data={leituras
-                .map((l) => l.ndvi)
-                .reverse()}
+              data={leituras.map(l => l.ndvi).reverse()}
               label="NDVI"
               unit=""
               color={Colors.primary}
             />
-
             <MiniBarChart
-              data={leituras
-                .map((l) => l.temperatura)
-                .reverse()}
+              data={leituras.map(l => l.temperatura).reverse()}
               label="TEMPERATURA (°C)"
               unit="°"
               color={Colors.accent}
             />
-
             <MiniBarChart
-              data={leituras
-                .map((l) => l.umidade)
-                .reverse()}
+              data={leituras.map(l => l.umidade).reverse()}
               label="UMIDADE (%)"
               unit="%"
               color={Colors.accentBlue}
@@ -1278,119 +1454,46 @@ export default function DetalhesPropriedadeScreen({
           </View>
         )}
 
+        {/* ── Alertas ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Alertas Ativos ({alertas.length})
-          </Text>
-
-          {alertas.length === 0 ? (
-            <View style={styles.noAlert}>
-              <Text style={styles.noAlertText}>
-                ✅ Nenhum alerta ativo.
-                Lavoura saudável!
-              </Text>
-            </View>
-          ) : (
-            alertas.map((a) => (
-              <AlertaCard
-                key={a.id}
-                alerta={a}
-                onResolve={() =>
-                  handleResolve(a.id)
-                }
-              />
-            ))
-          )}
+          <Text style={styles.sectionTitle}>Alertas Ativos ({alertas.length})</Text>
+          {alertas.length === 0
+            ? <View style={styles.noAlert}><Text style={styles.noAlertText}>✅ Nenhum alerta ativo. Lavoura saudável!</Text></View>
+            : alertas.map(a => <AlertaCard key={a.id} alerta={a} onResolve={() => handleResolve(a.id)} />)
+          }
         </View>
 
-        <View
-          style={{ height: Spacing.xl }}
-        />
+        <View style={{ height: Spacing.xl }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: Colors.bg,
-  },
+  safe:       { flex: 1, backgroundColor: Colors.bg },
+  editBtn:    { backgroundColor: Colors.bgSurface, borderRadius: Radius.sm, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: Colors.border },
+  editText:   { fontSize: 13, color: Colors.textSecondary },
 
-  editBtn: {
-    backgroundColor: Colors.bgSurface,
-    borderRadius: Radius.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
+  riscoBanner: { marginHorizontal: Spacing.lg, backgroundColor: Colors.bgCard, borderRadius: Radius.lg, padding: Spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg, borderWidth: 1, borderColor: Colors.border },
+  riscoLabel:  { fontSize: 13, color: Colors.textSecondary },
 
-  editText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
+  section:      { paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.sm },
+  statsGrid:    { flexDirection: 'row', gap: 8 },
+  statItem:     { flex: 1 },
 
-  riscoBanner: {
-    marginHorizontal: Spacing.lg,
-    backgroundColor: Colors.bgCard,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
+  noAlert:     { backgroundColor: Colors.bgCard, borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border },
+  noAlertText: { color: Colors.primary, fontSize: 14, textAlign: 'center' },
+});
 
-  riscoLabel: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-
-  section: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
-
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-
-  statItem: {
-    flex: 1,
-  },
-
-  noAlert: {
-    backgroundColor: Colors.bgCard,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-
-  noAlertText: {
-    color: Colors.primary,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-});  forme proprioedadeSceen // src/screens/FormPropriedadeScreen.tsx
+// src/screens/FormPropriedadeScreen.tsx
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, SafeAreaView, Alert, KeyboardAvoidingView,
   Platform, ActivityIndicator,
 } from 'react-native';
-import { Colors, Spacing, Radius } from '../styles/colors';
+import { Colors, Spacing, Radius } from '../theme/colors';
 import { propriedadeService } from '../services/api';
 import { Propriedade } from '../types';
 import { ScreenHeader } from '../components';
@@ -1639,307 +1742,126 @@ const styles = StyleSheet.create({
 
   cancelBtn:  { paddingVertical: 14, alignItems: 'center' },
   cancelText: { fontSize: 14, color: Colors.textMuted },
-});  lofgin screen. // src/screens/LoginScreen.tsx
-import React, { useState } from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, SafeAreaView, Alert, KeyboardAvoidingView,
-  Platform, ScrollView, ActivityIndicator,
-} from 'react-native';
-import { Colors, Spacing, Radius } from '../styles/colors';
-import { produtorService } from '../services/api';
-
-export default function LoginScreen({ navigation }: any) {
-  const [email,   setEmail]   = useState('');
-  const [senha,   setSenha]   = useState('');
-  const [loading, setLoading] = useState(false);
-  const [errors,  setErrors]  = useState<{ email?: string; senha?: string }>({});
-  const [showPass, setShowPass] = useState(false);
-
-  function validate(): boolean {
-    const e: typeof errors = {};
-    if (!email.trim())                    e.email = 'E-mail obrigatório';
-    else if (!email.includes('@'))        e.email = 'E-mail inválido';
-    if (!senha || senha.length < 4)       e.senha = 'Senha deve ter ao menos 4 caracteres';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
-  async function handleLogin() {
-    if (!validate()) return;
-    setLoading(true);
-    try {
-      await produtorService.login(email.trim(), senha);
-      // ⚠️  Aqui você pode salvar o token JWT retornado:
-      // await AsyncStorage.setItem('token', response.data.token);
-      navigation.replace('MainTabs');
-    } catch (err: any) {
-      Alert.alert('Falha no login', err.message || 'Credenciais incorretas. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <SafeAreaView style={styles.safe}>
-      {/* ── Background decorativo ── */}
-      <View style={styles.bgCircle1} />
-      <View style={styles.bgCircle2} />
-      <View style={styles.bgDot1} />
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.kav}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* ── Logo / Marca ── */}
-          <View style={styles.logoBlock}>
-            <View style={styles.logoIcon}>
-              <Text style={styles.logoEmoji}>🛰️</Text>
-            </View>
-            <Text style={styles.appName}>AstroFarm</Text>
-            <Text style={styles.tagline}>Monitoramento Agrícola via Satélite</Text>
-          </View>
-
-          {/* ── Card de login ── */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Entrar na plataforma</Text>
-
-            {/* E-mail */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>E-mail</Text>
-              <View style={[styles.inputBox, errors.email ? styles.inputError : null]}>
-                <Text style={styles.inputIcon}>✉</Text>
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="seu@email.com"
-                  placeholderTextColor={Colors.textMuted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
-            </View>
-
-            {/* Senha */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Senha</Text>
-              <View style={[styles.inputBox, errors.senha ? styles.inputError : null]}>
-                <Text style={styles.inputIcon}>🔒</Text>
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  value={senha}
-                  onChangeText={setSenha}
-                  placeholder="••••••••"
-                  placeholderTextColor={Colors.textMuted}
-                  secureTextEntry={!showPass}
-                />
-                <TouchableOpacity onPress={() => setShowPass(v => !v)} style={styles.eyeBtn}>
-                  <Text style={styles.eyeIcon}>{showPass ? '🙈' : '👁️'}</Text>
-                </TouchableOpacity>
-              </View>
-              {errors.senha ? <Text style={styles.errorText}>{errors.senha}</Text> : null}
-            </View>
-
-            {/* Botão login */}
-            <TouchableOpacity
-              style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
-              onPress={handleLogin}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              {loading
-                ? <ActivityIndicator color={Colors.bg} size="small" />
-                : <Text style={styles.loginBtnText}>Acessar →</Text>
-              }
-            </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Demo / dev shortcut */}
-            <TouchableOpacity
-              style={styles.demoBtn}
-              onPress={() => navigation.replace('MainTabs')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.demoBtnText}>Entrar sem API (demonstração)</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* ── Rodapé ── */}
-          <Text style={styles.footer}>
-            AstroFarm © 2026 · ODS 2 · ODS 13
-          </Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  safe:  { flex: 1, backgroundColor: Colors.bg },
-  kav:   { flex: 1 },
-  scroll: { flexGrow: 1, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xl },
-
-  // Decorações de fundo
-  bgCircle1: {
-    position: 'absolute', top: -80, right: -80,
-    width: 260, height: 260, borderRadius: 130,
-    backgroundColor: Colors.primaryGlow,
-  },
-  bgCircle2: {
-    position: 'absolute', bottom: 60, left: -100,
-    width: 200, height: 200, borderRadius: 100,
-    backgroundColor: 'rgba(52,152,219,0.08)',
-  },
-  bgDot1: {
-    position: 'absolute', top: 180, left: 30,
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: Colors.primary, opacity: 0.6,
-  },
-
-  // Logo
-  logoBlock:  { alignItems: 'center', paddingTop: 56, marginBottom: Spacing.xl },
-  logoIcon:   {
-    width: 72, height: 72, borderRadius: 20,
-    backgroundColor: Colors.bgCard,
-    borderWidth: 1.5, borderColor: Colors.border,
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 14,
-    shadowColor: Colors.primary, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
-  },
-  logoEmoji:  { fontSize: 36 },
-  appName:    { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, letterSpacing: 1 },
-  tagline:    { fontSize: 13, color: Colors.textSecondary, marginTop: 6, textAlign: 'center' },
-
-  // Card
-  card:       {
-    backgroundColor: Colors.bgCard,
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
-    borderWidth: 1, borderColor: Colors.border,
-    marginBottom: Spacing.xl,
-    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 16, elevation: 8,
-  },
-  cardTitle:  { fontSize: 17, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.lg },
-
-  // Fields
-  fieldGroup: { marginBottom: Spacing.md },
-  label:      { fontSize: 12, color: Colors.textSecondary, marginBottom: 6, fontWeight: '600', letterSpacing: 0.5 },
-  inputBox:   {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: Colors.bgSurface,
-    borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border,
-    paddingHorizontal: Spacing.md, gap: Spacing.sm,
-  },
-  inputError: { borderColor: Colors.accentRed },
-  inputIcon:  { fontSize: 14 },
-  input:      { color: Colors.textPrimary, fontSize: 15, paddingVertical: 13 },
-  eyeBtn:     { padding: 4 },
-  eyeIcon:    { fontSize: 16 },
-  errorText:  { fontSize: 11, color: Colors.accentRed, marginTop: 4 },
-
-  // Botões
-  loginBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.md,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginTop: Spacing.sm,
-    shadowColor: Colors.primary, shadowOpacity: 0.4, shadowRadius: 10, elevation: 5,
-  },
-  loginBtnDisabled: { opacity: 0.6 },
-  loginBtnText:     { fontSize: 16, fontWeight: '800', color: Colors.bg, letterSpacing: 0.5 },
-
-  divider:     { flexDirection: 'row', alignItems: 'center', marginVertical: Spacing.md, gap: Spacing.sm },
-  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
-  dividerText: { color: Colors.textMuted, fontSize: 12 },
-
-  demoBtn:     { borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, paddingVertical: 12, alignItems: 'center' },
-  demoBtnText: { color: Colors.textSecondary, fontSize: 13 },
-
-  footer: { textAlign: 'center', color: Colors.textMuted, fontSize: 11, marginTop: 'auto' },
-});  propriedadScreen // src/screens/PropriedadesScreen.tsx
+});
+// src/screens/AlertasScreen.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, SafeAreaView, Alert, RefreshControl,
+  StyleSheet, SafeAreaView, RefreshControl, Alert,
 } from 'react-native';
-import { Colors, Spacing, Radius } from '../styles/colors';
-import { propriedadeService } from '../services/api';
-import { Propriedade } from '../types';
-import { EmptyState, LoadingOverlay, ScreenHeader } from '../components';
+import { Colors, Spacing, Radius } from '../theme/colors';
+import { alertaService } from '../services/api';
+import { Alerta } from '../types';
+import { ScreenHeader, LoadingOverlay, EmptyState } from '../components';
 
 // ── Mock ──────────────────────────────────────────────────────────────────────
-const MOCK: Propriedade[] = [
-  { id: 1, nome: 'Fazenda São João',  localizacao: 'Ribeirão Preto, SP', cultura: 'Soja',  areaHectares: 320, produtorId: 1 },
-  { id: 2, nome: 'Sítio Estrela',     localizacao: 'Londrina, PR',       cultura: 'Milho', areaHectares: 85,  produtorId: 1 },
-  { id: 3, nome: 'Rancho Verde',      localizacao: 'Uberaba, MG',        cultura: 'Café',  areaHectares: 40,  produtorId: 1 },
+const MOCK_ALERTAS: Alerta[] = [
+  { id: 1, propriedadeId: 2, tipo: 'NDVI_BAIXO',    descricao: 'NDVI abaixo de 0.3 detectado na propriedade Sítio Estrela. Possível déficit hídrico ou ataque de pragas.',   nivel: 'ALTO',  ativo: true, createdAt: new Date().toISOString() },
+  { id: 2, propriedadeId: 2, tipo: 'SECA',          descricao: 'Umidade do solo em 28% no Sítio Estrela. Recomenda-se irrigação imediata.',                                    nivel: 'ALTO',  ativo: true, createdAt: new Date(Date.now() - 3600_000).toISOString() },
+  { id: 3, propriedadeId: 3, tipo: 'PRAGA',         descricao: 'Índice NDVI com padrão irregular no Rancho Verde. Suspeita de infestação na área leste.',                       nivel: 'MEDIO', ativo: true, createdAt: new Date(Date.now() - 86_400_000).toISOString() },
+  { id: 4, propriedadeId: 1, tipo: 'EXCESSO_CHUVA', descricao: 'Umidade acima de 90% na Fazenda São João. Risco de encharcamento nas zonas baixas.',                           nivel: 'BAIXO', ativo: true, createdAt: new Date(Date.now() - 2 * 86_400_000).toISOString() },
 ];
 
-const CULTURA_ICON: Record<string, string> = {
-  Soja: '🌱', Milho: '🌽', Café: '☕', Arroz: '🍚', Cana: '🎋',
-};
+const TIPO_ICON: Record<string, string>  = { NDVI_BAIXO: '🌿', SECA: '🔥', PRAGA: '🐛', EXCESSO_CHUVA: '🌊' };
+const TIPO_LABEL: Record<string, string> = { NDVI_BAIXO: 'NDVI Baixo', SECA: 'Seca', PRAGA: 'Praga', EXCESSO_CHUVA: 'Excesso Chuva' };
+const NIVEL_COLOR: Record<string, string> = { ALTO: Colors.accentRed, MEDIO: Colors.accent, BAIXO: Colors.primary };
 
-function PropCard({ item, onPress, onDelete }: { item: Propriedade; onPress: () => void; onDelete: () => void }) {
+// ── Filtro chips ──────────────────────────────────────────────────────────────
+type Filtro = 'TODOS' | 'ALTO' | 'MEDIO' | 'BAIXO';
+
+function FilterChips({ active, onChange }: { active: Filtro; onChange: (f: Filtro) => void }) {
+  const opts: { key: Filtro; label: string; color: string }[] = [
+    { key: 'TODOS', label: 'Todos',  color: Colors.textSecondary },
+    { key: 'ALTO',  label: '🔴 Alto',  color: Colors.accentRed },
+    { key: 'MEDIO', label: '🟡 Médio', color: Colors.accent },
+    { key: 'BAIXO', label: '🟢 Baixo', color: Colors.primary },
+  ];
   return (
-    <TouchableOpacity style={cardStyles.card} onPress={onPress} activeOpacity={0.8}>
-      <View style={cardStyles.header}>
-        <View style={cardStyles.iconBox}>
-          <Text style={cardStyles.icon}>{CULTURA_ICON[item.cultura] ?? '🌾'}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={cardStyles.nome}>{item.nome}</Text>
-          <Text style={cardStyles.loc}>📍 {item.localizacao}</Text>
-        </View>
+    <View style={filterStyles.row}>
+      {opts.map(o => (
         <TouchableOpacity
-          onPress={onDelete}
-          style={cardStyles.deleteBtn}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          key={o.key}
+          style={[filterStyles.chip, active === o.key && { borderColor: o.color, backgroundColor: `${o.color}18` }]}
+          onPress={() => onChange(o.key)}
         >
-          <Text style={cardStyles.deleteIcon}>🗑</Text>
+          <Text style={[filterStyles.chipText, active === o.key && { color: o.color, fontWeight: '700' }]}>{o.label}</Text>
         </TouchableOpacity>
-      </View>
-      <View style={cardStyles.footer}>
-        <View style={cardStyles.pill}>
-          <Text style={cardStyles.pillText}>{item.cultura}</Text>
-        </View>
-        <Text style={cardStyles.area}>{item.areaHectares} ha</Text>
-      </View>
-    </TouchableOpacity>
+      ))}
+    </View>
   );
 }
 
-const cardStyles = StyleSheet.create({
-  card:       { backgroundColor: Colors.bgCard, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.border },
-  header:     { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, marginBottom: Spacing.sm },
-  iconBox:    { width: 42, height: 42, borderRadius: Radius.sm, backgroundColor: Colors.bgSurface, justifyContent: 'center', alignItems: 'center' },
-  icon:       { fontSize: 20 },
-  nome:       { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  loc:        { fontSize: 12, color: Colors.textSecondary, marginTop: 3 },
-  deleteBtn:  { padding: 4 },
-  deleteIcon: { fontSize: 16 },
-  footer:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  pill:       { backgroundColor: Colors.primaryGlow, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 3 },
-  pillText:   { fontSize: 11, color: Colors.primary, fontWeight: '600' },
-  area:       { fontSize: 13, color: Colors.textSecondary },
+const filterStyles = StyleSheet.create({
+  row:      { flexDirection: 'row', gap: 8, paddingHorizontal: Spacing.lg, marginBottom: Spacing.md, flexWrap: 'wrap' },
+  chip:     { borderRadius: Radius.full, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.bgCard },
+  chipText: { fontSize: 12, color: Colors.textSecondary },
+});
+
+// ── Card de alerta ────────────────────────────────────────────────────────────
+function AlertaItem({ alerta, onResolve }: { alerta: Alerta; onResolve: (id: number) => void }) {
+  const color = NIVEL_COLOR[alerta.nivel] ?? Colors.primary;
+  const ago   = () => {
+    const diff = Date.now() - new Date(alerta.createdAt).getTime();
+    const h = Math.floor(diff / 3_600_000);
+    if (h < 1) return 'Agora há pouco';
+    if (h < 24) return `Há ${h}h`;
+    return `Há ${Math.floor(h / 24)} dia${Math.floor(h / 24) > 1 ? 's' : ''}`;
+  };
+
+  return (
+    <View style={[itemStyles.card, { borderLeftColor: color }]}>
+      {/* Header */}
+      <View style={itemStyles.header}>
+        <View style={[itemStyles.iconBox, { backgroundColor: `${color}18` }]}>
+          <Text style={itemStyles.icon}>{TIPO_ICON[alerta.tipo] ?? '⚠️'}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <View style={itemStyles.titleRow}>
+            <Text style={itemStyles.tipo}>{TIPO_LABEL[alerta.tipo] ?? alerta.tipo}</Text>
+            <View style={[itemStyles.nivelBadge, { backgroundColor: `${color}22`, borderColor: color }]}>
+              <Text style={[itemStyles.nivelText, { color }]}>{alerta.nivel}</Text>
+            </View>
+          </View>
+          <Text style={itemStyles.ago}>{ago()}</Text>
+        </View>
+      </View>
+
+      {/* Descrição */}
+      <Text style={itemStyles.desc}>{alerta.descricao}</Text>
+
+      {/* Ações */}
+      <View style={itemStyles.actions}>
+        <TouchableOpacity
+          style={[itemStyles.resolveBtn, { borderColor: color }]}
+          onPress={() => onResolve(alerta.id)}
+        >
+          <Text style={[itemStyles.resolveText, { color }]}>✓ Marcar como resolvido</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const itemStyles = StyleSheet.create({
+  card:        { backgroundColor: Colors.bgCard, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.sm, borderLeftWidth: 4, borderWidth: 1, borderColor: Colors.border },
+  header:      { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
+  iconBox:     { width: 44, height: 44, borderRadius: Radius.sm, justifyContent: 'center', alignItems: 'center' },
+  icon:        { fontSize: 22 },
+  titleRow:    { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  tipo:        { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
+  nivelBadge:  { borderRadius: Radius.full, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1 },
+  nivelText:   { fontSize: 10, fontWeight: '700', letterSpacing: 0.8 },
+  ago:         { fontSize: 11, color: Colors.textMuted, marginTop: 3 },
+  desc:        { fontSize: 13, color: Colors.textSecondary, lineHeight: 19, marginBottom: Spacing.sm },
+  actions:     { borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: Spacing.sm },
+  resolveBtn:  { alignSelf: 'flex-start', borderWidth: 1, borderRadius: Radius.sm, paddingHorizontal: 12, paddingVertical: 5 },
+  resolveText: { fontSize: 12, fontWeight: '700' },
 });
 
 // ── Tela principal ────────────────────────────────────────────────────────────
-export default function PropriedadesScreen({ navigation }: any) {
-  const [itens,      setItens]      = useState<Propriedade[]>([]);
+export default function AlertasScreen({ navigation }: any) {
+  const [alertas,    setAlertas]    = useState<Alerta[]>([]);
+  const [filtro,     setFiltro]     = useState<Filtro>('TODOS');
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -1947,10 +1869,10 @@ export default function PropriedadesScreen({ navigation }: any) {
     if (!silent) setLoading(true);
     try {
       // ⚠️  Substitua 1 pelo id do produtor logado
-      const res = await propriedadeService.listar(1);
-      setItens(res.data);
+      const res = await alertaService.listar(1);
+      setAlertas(res.data);
     } catch {
-      setItens(MOCK);
+      setAlertas(MOCK_ALERTAS);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -1959,64 +1881,62 @@ export default function PropriedadesScreen({ navigation }: any) {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleDelete = (item: Propriedade) => {
-    Alert.alert(
-      'Remover propriedade',
-      `Deseja remover "${item.nome}"? Todas as leituras vinculadas também serão excluídas.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Remover',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await propriedadeService.deletar(item.id);
-              setItens(prev => prev.filter(p => p.id !== item.id));
-            } catch (err: any) {
-              Alert.alert('Erro', err.message);
-            }
-          },
+  const handleResolve = (id: number) => {
+    Alert.alert('Resolver alerta', 'Confirma que este alerta foi tratado?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Confirmar', onPress: async () => {
+          try {
+            await alertaService.resolver(id);
+          } catch { /* silencioso */ }
+          setAlertas(prev => prev.filter(a => a.id !== id));
         },
-      ]
-    );
+      },
+    ]);
   };
+
+  const filtered = filtro === 'TODOS'
+    ? alertas
+    : alertas.filter(a => a.nivel === filtro);
+
+  const altoCount = alertas.filter(a => a.nivel === 'ALTO').length;
 
   if (loading) return <LoadingOverlay />;
 
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenHeader
-        title="Minhas Fazendas"
-        subtitle={`${itens.length} propriedade${itens.length !== 1 ? 's' : ''} cadastrada${itens.length !== 1 ? 's' : ''}`}
-        right={
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => navigation.navigate('FormPropriedade', { propriedade: undefined })}
-          >
-            <Text style={styles.addIcon}>＋</Text>
-          </TouchableOpacity>
-        }
+        title="Alertas"
+        subtitle={alertas.length > 0 ? `${alertas.length} ativo${alertas.length > 1 ? 's' : ''}` : 'Tudo tranquilo'}
       />
 
+      {altoCount > 0 && (
+        <View style={styles.urgentBanner}>
+          <Text style={styles.urgentText}>🚨 {altoCount} alerta{altoCount > 1 ? 's' : ''} de risco ALTO — ação necessária!</Text>
+        </View>
+      )}
+
+      <FilterChips active={filtro} onChange={setFiltro} />
+
       <FlatList
-        data={itens}
+        data={filtered}
         keyExtractor={item => item.id.toString()}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={Colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); load(true); }}
+            tintColor={Colors.primary}
+          />
         }
         ListEmptyComponent={
           <EmptyState
-            message="Nenhuma fazenda cadastrada ainda.\nToque em ＋ para adicionar."
-            icon="🌾"
+            message={filtro === 'TODOS' ? 'Nenhum alerta ativo. Sua lavoura está bem! 🌱' : `Sem alertas de nível ${filtro}.`}
+            icon={filtro === 'TODOS' ? '✅' : '🔍'}
           />
         }
         renderItem={({ item }) => (
-          <PropCard
-            item={item}
-            onPress={() => navigation.navigate('DetalhesPropriedade', { propriedadeId: item.id, nome: item.nome })}
-            onDelete={() => handleDelete(item)}
-          />
+          <AlertaItem alerta={item} onResolve={handleResolve} />
         )}
       />
     </SafeAreaView>
@@ -2024,257 +1944,186 @@ export default function PropriedadesScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: Colors.bg },
-  list:   { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xl },
-  addBtn: {
-    width: 38, height: 38, borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  addIcon: { fontSize: 20, color: Colors.bg, fontWeight: '700', marginTop: -1 },
-}); api screen // src/services/api.ts
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import { Propriedade, LeituraSatelital, Alerta, Produtor } from '../types';
-
-// ⚠️  ALTERE AQUI: URL base da sua API C# (.NET)
-// Para emulador Android: http://10.0.2.2:5000/api
-// Para dispositivo físico: http://SEU_IP_LOCAL:5000/api
-// Para produção: https://sua-api.azurewebsites.net/api
-const BASE_URL = 'http://10.0.2.2:5000/api';
-
-const api: AxiosInstance = axios.create({
-  baseURL: BASE_URL,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  safe:          { flex: 1, backgroundColor: Colors.bg },
+  urgentBanner:  { marginHorizontal: Spacing.lg, marginBottom: Spacing.sm, backgroundColor: 'rgba(231,76,60,0.12)', borderRadius: Radius.md, padding: Spacing.sm, borderWidth: 1, borderColor: Colors.accentRed },
+  urgentText:    { fontSize: 13, color: Colors.accentRed, fontWeight: '600', textAlign: 'center' },
+  list:          { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xl },
 });
 
-// ── Interceptors ──────────────────────────────────────────────────────────────
-
-api.interceptors.request.use(
-  (config) => {
-    // Se sua API usar JWT: descomente e salve o token em AsyncStorage
-    // const token = await AsyncStorage.getItem('token');
-    // if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    const msg =
-      (error.response?.data as any)?.message ||
-      error.message ||
-      'Erro de conexão com o servidor';
-    return Promise.reject(new Error(msg));
-  }
-);
-
-// ── Produtores ────────────────────────────────────────────────────────────────
-
-export const produtorService = {
-  login: (email: string, senha: string) =>
-    api.post<{ token: string; produtor: Produtor }>('/auth/login', { email, senha }),
-
-  getById: (id: number) =>
-    api.get<Produtor>(`/produtores/${id}`),
-
-  create: (data: Omit<Produtor, 'id' | 'createdAt'> & { senha: string }) =>
-    api.post<Produtor>('/produtores', data),
-
-  update: (id: number, data: Partial<Produtor>) =>
-    api.put<Produtor>(`/produtores/${id}`, data),
+module.exports = function(api) {
+  api.cache(true);
+  return {
+    presets: ['babel-preset-expo'],
+  };
 };
 
-// ── Propriedades ──────────────────────────────────────────────────────────────
+# 🛰️ AstroFarm — Mobile App
 
-export const propriedadeService = {
-  // ⚠️  ROTA: GET /api/propriedades?produtorId={id}
-  listar: (produtorId: number) =>
-    api.get<Propriedade[]>('/propriedades', { params: { produtorId } }),
+Aplicativo React Native para a Global Solution 2026/1 — FIAP  
+**Tema:** Economia Espacial · Monitoramento Agrícola via Satélite
 
-  // ⚠️  ROTA: GET /api/propriedades/{id}
-  getById: (id: number) =>
-    api.get<Propriedade>(`/propriedades/${id}`),
+---
 
-  // ⚠️  ROTA: POST /api/propriedades
-  criar: (data: Omit<Propriedade, 'id' | 'createdAt'>) =>
-    api.post<Propriedade>('/propriedades', data),
+## Telas implementadas
 
-  // ⚠️  ROTA: PUT /api/propriedades/{id}
-  atualizar: (id: number, data: Partial<Propriedade>) =>
-    api.put<Propriedade>(`/propriedades/${id}`, data),
+| # | Tela | Arquivo |
+|---|------|---------|
+| 1 | Login / Autenticação | `LoginScreen.tsx` |
+| 2 | Dashboard (indicadores + risco lavoura) | `DashboardScreen.tsx` |
+| 3 | Minhas Fazendas (lista CRUD) | `PropriedadesScreen.tsx` |
+| 4 | Detalhes da Propriedade (gráficos + alertas) | `DetalhesPropriedadeScreen.tsx` |
+| 5 | Cadastro / Edição de Propriedade | `FormPropriedadeScreen.tsx` |
+| 6 | Central de Alertas | `AlertasScreen.tsx` |
 
-  // ⚠️  ROTA: DELETE /api/propriedades/{id}
-  deletar: (id: number) =>
-    api.delete(`/propriedades/${id}`),
-};
+---
 
-// ── Leituras Satelitais ───────────────────────────────────────────────────────
+## Instalação
 
-export const leituraService = {
-  // ⚠️  ROTA: GET /api/leituras?propriedadeId={id}&limit=30
-  listar: (propriedadeId: number, limit = 30) =>
-    api.get<LeituraSatelital[]>('/leituras', { params: { propriedadeId, limit } }),
+```bash
+npm install
+npx expo start
+```
 
-  // ⚠️  ROTA: GET /api/leituras/ultima/{propriedadeId}
-  getUltima: (propriedadeId: number) =>
-    api.get<LeituraSatelital>(`/leituras/ultima/${propriedadeId}`),
+---
 
-  // ⚠️  ROTA: GET /api/leituras/dashboard — retorna última leitura de todas as propriedades do produtor
-  getDashboard: (produtorId: number) =>
-    api.get<{ propriedadeId: number; nome: string; leitura: LeituraSatelital; risco: string }[]>(
-      '/leituras/dashboard',
-      { params: { produtorId } }
-    ),
-};
+## ⚠️ Pontos de integração com a API C# (.NET)
 
-// ── Alertas ───────────────────────────────────────────────────────────────────
+### 1. URL base — `src/services/api.ts` linha 12
 
-export const alertaService = {
-  // ⚠️  ROTA: GET /api/alertas?produtorId={id}&ativo=true
-  listar: (produtorId: number, apenasAtivos = true) =>
-    api.get<Alerta[]>('/alertas', { params: { produtorId, ativo: apenasAtivos } }),
+```typescript
+const BASE_URL = 'http://10.0.2.2:5000/api';
+// Emulador Android → 10.0.2.2 aponta para localhost da máquina
+// Dispositivo físico → use o IP local: ex. http://192.168.1.100:5000/api
+// Produção → https://sua-api.azurewebsites.net/api
+```
 
-  // ⚠️  ROTA: PUT /api/alertas/{id}/resolver
-  resolver: (id: number) =>
-    api.put(`/alertas/${id}/resolver`),
-};
+---
 
-export default api;  // src/stlye/colors.ts
-// AstroFarm — paleta: espaço escuro + verde lavoura + laranja alerta orbital
+### 2. Endpoints que a API C# precisa expor
 
-export const Colors = {
-  // Backgrounds
-  bg:          '#0A1628',   // azul noite profundo
-  bgCard:      '#0F1F3D',   // azul escuro card
-  bgSurface:   '#132040',   // superfície elevada
+#### Auth
+| Método | Rota | Body | Retorno |
+|--------|------|------|---------|
+| POST | `/api/auth/login` | `{ email, senha }` | `{ token, produtor }` |
 
-  // Brand
-  primary:     '#2ECC71',   // verde satélite / lavoura saudável
-  primaryDark: '#1A8A4A',
-  primaryGlow: 'rgba(46,204,113,0.18)',
+#### Produtores
+| Método | Rota | Retorno |
+|--------|------|---------|
+| GET | `/api/produtores/{id}` | `Produtor` |
+| POST | `/api/produtores` | `Produtor` |
+| PUT | `/api/produtores/{id}` | `Produtor` |
 
-  // Accent
-  accent:      '#F39C12',   // laranja orbital / alerta médio
-  accentRed:   '#E74C3C',   // vermelho alerta crítico
-  accentBlue:  '#3498DB',   // azul satélite / info
+#### Propriedades (CRUD completo)
+| Método | Rota | Notas |
+|--------|------|-------|
+| GET | `/api/propriedades?produtorId={id}` | lista do produtor |
+| GET | `/api/propriedades/{id}` | um registro |
+| POST | `/api/propriedades` | body: `{ nome, localizacao, cultura, areaHectares, produtorId }` |
+| PUT | `/api/propriedades/{id}` | body parcial |
+| DELETE | `/api/propriedades/{id}` | sem body |
 
-  // Text
-  textPrimary:   '#E8F4F0',
-  textSecondary: '#8BA8C0',
-  textMuted:     '#4A6680',
+#### Leituras Satelitais
+| Método | Rota | Notas |
+|--------|------|-------|
+| GET | `/api/leituras?propriedadeId={id}&limit=30` | histórico |
+| GET | `/api/leituras/ultima/{propriedadeId}` | última leitura |
+| GET | `/api/leituras/dashboard?produtorId={id}` | retorna array `[{ propriedadeId, nome, leitura, risco }]` |
 
-  // Border
-  border:      '#1E3A5F',
-  borderLight: '#2A4F78',
+#### Alertas
+| Método | Rota |
+|--------|------|
+| GET | `/api/alertas?produtorId={id}&ativo=true` |
+| PUT | `/api/alertas/{id}/resolver` |
 
-  // Status
-  statusLow:    '#2ECC71',
-  statusMedium: '#F39C12',
-  statusHigh:   '#E74C3C',
+---
 
-  // Transparent overlays
-  overlay:     'rgba(10,22,40,0.85)',
-};
+### 3. MongoDB — onde usar
 
-export const Fonts = {
-  light:    '300',
-  regular:  '400',
-  medium:   '500',
-  semibold: '600',
-  bold:     '700',
-};
+A disciplina menciona MongoDB para **leituras satelitais**, pois diferentes satélites retornam campos variados (schema flexível).
 
-export const Spacing = {
-  xs:  4,
-  sm:  8,
-  md:  16,
-  lg:  24,
-  xl:  32,
-  xxl: 48,
-};
+**Recomendação para o colega de API:**
 
-export const Radius = {
-  sm:  8,
-  md:  12,
-  lg:  16,
-  xl:  24,
-  full: 999,
-};  type // src/types/index.ts
-
-export interface Produtor {
-  id: number;
-  nome: string;
-  email: string;
-  cpf: string;
-  telefone?: string;
-  createdAt?: string;
+```csharp
+// Modelo do documento MongoDB (LeituraSatelital)
+// Coleção: leituras_satelitais
+{
+  "_id": ObjectId,
+  "propriedadeId": int,       // FK para Oracle
+  "ndvi": double,
+  "temperatura": double,
+  "umidade": double,
+  "dataLeitura": DateTime,
+  // Campos extras opcionais (schema flexível):
+  "pressaoAtm": double?,
+  "coberturaNuvens": double?,
+  "sateliteOrigem": string?   // ex: "Sentinel-2", "Landsat-9"
 }
+```
 
-export interface Propriedade {
-  id: number;
-  nome: string;
-  localizacao: string;
-  cultura: string;       // ex: "Soja", "Milho", "Café"
-  areaHectares: number;
-  produtorId: number;
-  createdAt?: string;
-}
+Os endpoints `/api/leituras/*` na API C# devem consultar o MongoDB para retornar esses dados.  
+As demais entidades (Produtor, Propriedade, Alerta) ficam no Oracle como definido na disciplina de banco.
 
-export interface LeituraSatelital {
-  id: number;
-  propriedadeId: number;
-  ndvi: number;          // 0.0 a 1.0
-  temperatura: number;   // °C
-  umidade: number;       // %
-  dataLeitura: string;   // ISO date string
-}
+---
 
-export interface Alerta {
-  id: number;
-  propriedadeId: number;
-  tipo: 'SECA' | 'PRAGA' | 'EXCESSO_CHUVA' | 'NDVI_BAIXO';
-  descricao: string;
-  nivel: 'BAIXO' | 'MEDIO' | 'ALTO';
-  ativo: boolean;
-  createdAt: string;
-}
+### 4. ID do produtor logado
 
-export type RiscoNivel = 'BAIXO' | 'MÉDIO' | 'ALTO';
+Atualmente o produtorId está hard-coded como `1` em vários lugares.  
+Após implementar o JWT na API, salve o id retornado no login:
 
-// Navigation param lists
-export type RootStackParamList = {
-  Login:       undefined;
-  MainTabs:    undefined;
-};
+```typescript
+// Instale: npx expo install @react-native-async-storage/async-storage
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type TabParamList = {
-  Dashboard:    undefined;
-  Propriedades: undefined;
-  Alertas:      undefined;
-  Perfil:       undefined;
-};
+// No LoginScreen, após login bem-sucedido:
+await AsyncStorage.setItem('produtorId', String(response.data.produtor.id));
+await AsyncStorage.setItem('token', response.data.token);
 
-export type PropriedadesStackParamList = {
-  ListaPropriedades:    undefined;
-  DetalhesPropriedade:  { propriedadeId: number; nome: string };
-  FormPropriedade:      { propriedade?: Propriedade };
-};
+// Nos serviços, recupere antes de usar:
+const produtorId = parseInt(await AsyncStorage.getItem('produtorId') ?? '0');
+```
 
-// API response wrappers
-export interface ApiResponse<T> {
-  data: T;
-  message?: string;
-  success: boolean;
-}
+Nos arquivos que usam `produtorId: 1`, busque por `// ⚠️  substituir` — há comentários em todos os pontos.
 
-export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-}  Essa é a esturtura do meu projeto preciso de uma tela inical quando o produtor vai logar preciso ter um cadastro e o login ja temos os que sao conectados com o login e o login teste  preciso que. melhore meus codigos o layout a interface coloque um menu sanduiche, opcao de sair da conta o editar perl precisa estar conectado com a api etc Em anexo vai meu pdf a material é a mobile 
+---
+
+### 5. Token JWT nos headers
+
+No `src/services/api.ts`, descomente o interceptor de request:
+
+```typescript
+api.interceptors.request.use(async (config) => {
+  const token = await AsyncStorage.getItem('token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+```
+
+---
+
+## Estrutura de pastas
+
+```
+AstroFarm/
+├── App.tsx
+├── package.json
+├── tsconfig.json
+├── babel.config.js
+└── src/
+    ├── navigation/
+    │   └── AppNavigator.tsx
+    ├── screens/
+    │   ├── LoginScreen.tsx
+    │   ├── DashboardScreen.tsx
+    │   ├── PropriedadesScreen.tsx
+    │   ├── DetalhesPropriedadeScreen.tsx
+    │   ├── FormPropriedadeScreen.tsx
+    │   └── AlertasScreen.tsx
+    ├── services/
+    │   └── api.ts              ← EDITE A BASE_URL AQUI
+    ├── components/
+    │   └── index.tsx
+    ├── types/
+    │   └── index.ts
+    └── theme/
+        └── colors.ts
+``` 

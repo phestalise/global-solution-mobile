@@ -1,79 +1,120 @@
-import React, { useState } from 'react';
+import React from "react";
 import {
+  ScrollView,
   View,
   Text,
+  TextInput,
+  TouchableOpacity,
   StyleSheet,
-} from 'react-native';
+} from "react-native";
 
-import { LinearGradient } from 'expo-linear-gradient';
-import OrbitInput from '../components/OrbitInput';
-import OrbitButton from '../components/OrbitButton';
-import { useAuth } from '../context/AuthContext';
-import { Colors } from '../styles/colors';
+import { Colors } from "../styles/colors";
 
-export default function RegisterScreen() {
-  const { register } = useAuth();
-
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
+export default function RegisterScreen({ navigation }: any) {
   return (
-    <LinearGradient
-      colors={['#050816', '#0B1120', '#111827']}
+    <ScrollView
       style={styles.container}
+      contentContainerStyle={{ padding: 24 }}
     >
-      <Text style={styles.title}>Nova Conta Orbital</Text>
+      <Text style={styles.title}>Criar Conta</Text>
 
-      <View style={styles.card}>
-        <OrbitInput
-          placeholder="Nome"
-          value={name}
-          onChangeText={setName}
-        />
+      <Text style={styles.subtitle}>
+        Cadastro agrícola inteligente
+      </Text>
 
-        <OrbitInput
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-        />
+      <TextInput
+        placeholder="Nome do produtor"
+        placeholderTextColor="#7E8A97"
+        style={styles.input}
+      />
 
-        <OrbitInput
-          placeholder="Senha"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+      <TextInput
+        placeholder="Tipo de plantação"
+        placeholderTextColor="#7E8A97"
+        style={styles.input}
+      />
 
-        <OrbitButton
-          title="CRIAR CONTA"
-          onPress={() =>
-            register(name, email, password)
-          }
-        />
-      </View>
-    </LinearGradient>
+      <TextInput
+        placeholder="Tamanho da fazenda"
+        placeholderTextColor="#7E8A97"
+        style={styles.input}
+      />
+
+      <TextInput
+        placeholder="Região agrícola"
+        placeholderTextColor="#7E8A97"
+        style={styles.input}
+      />
+
+      <TextInput
+        placeholder="Email"
+        placeholderTextColor="#7E8A97"
+        style={styles.input}
+      />
+
+      <TextInput
+        placeholder="Senha"
+        placeholderTextColor="#7E8A97"
+        secureTextEntry
+        style={styles.input}
+      />
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate("Dashboard")}
+      >
+        <Text style={styles.buttonText}>
+          Criar conta
+        </Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    padding: 24,
+    backgroundColor: Colors.background,
   },
 
   title: {
     color: Colors.text,
-    fontSize: 32,
-    fontWeight: '900',
-    marginBottom: 32,
+    fontSize: 34,
+    fontWeight: "900",
+    marginTop: 50,
   },
 
-  card: {
-    backgroundColor: '#0D1328EE',
-    borderRadius: 28,
-    padding: 24,
+  subtitle: {
+    color: Colors.textMuted,
+    marginTop: 10,
+    marginBottom: 40,
+    fontSize: 16,
+  },
+
+  input: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    height: 58,
+    paddingHorizontal: 20,
+    color: Colors.text,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+
+  button: {
+    backgroundColor: Colors.primary,
+    height: 58,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 20,
+    marginBottom: 40,
+  },
+
+  buttonText: {
+    color: "#000",
+    fontWeight: "800",
+    fontSize: 18,
   },
 });

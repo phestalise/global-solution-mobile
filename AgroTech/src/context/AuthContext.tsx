@@ -35,6 +35,7 @@ export function AuthProvider({ children }: any) {
   function signOut() {
     setUser(null);
   }
+
   function updateProfile(name: string, email: string) {
     setUser({
       name,

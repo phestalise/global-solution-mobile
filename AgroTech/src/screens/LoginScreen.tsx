@@ -1,116 +1,90 @@
-import React, { useState } from 'react';
+import React from "react";
 import {
   View,
   Text,
-  StyleSheet,
+  TextInput,
   TouchableOpacity,
-} from 'react-native';
+  StyleSheet,
+} from "react-native";
 
-import { LinearGradient } from 'expo-linear-gradient';
-import OrbitInput from '../components/OrbitInput';
-import OrbitButton from '../components/OrbitButton';
-import { Colors } from '../styles/colors';
-import { useAuth } from '../context/AuthContext';
+import { Colors } from "../styles/colors";
 
 export default function LoginScreen({ navigation }: any) {
-  const { signIn } = useAuth();
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
   return (
-    <LinearGradient
-      colors={['#050816', '#0B1120', '#111827']}
-      style={styles.container}
-    >
-      <View style={styles.glow} />
-
-      <Text style={styles.logo}>ASTROFARM</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Entrar</Text>
 
       <Text style={styles.subtitle}>
-        Central Orbital Agrícola
+        Acesse sua central agrícola
       </Text>
 
-      <View style={styles.card}>
-        <OrbitInput
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-        />
+      <TextInput
+        placeholder="Email"
+        placeholderTextColor="#7E8A97"
+        style={styles.input}
+      />
 
-        <OrbitInput
-          placeholder="Senha"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+      <TextInput
+        placeholder="Senha"
+        placeholderTextColor="#7E8A97"
+        secureTextEntry
+        style={styles.input}
+      />
 
-        <OrbitButton
-          title="ENTRAR"
-          onPress={() => signIn(email, password)}
-        />
-        <OrbitButton
-          title="LOGIN TESTE"
-          onPress={() =>
-            signIn('teste@astrofarm.com', '123456')
-          }
-        />
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Register')}
-        >
-          <Text style={styles.link}>
-            Criar conta orbital
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </LinearGradient>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate("Dashboard")}
+      >
+        <Text style={styles.buttonText}>Entrar</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: Colors.background,
     padding: 24,
-    backgroundColor: Colors.bg,
+    justifyContent: "center",
   },
 
-  glow: {
-    position: 'absolute',
-    width: 320,
-    height: 320,
-    borderRadius: 200,
-    backgroundColor: '#00F5A030',
-    top: -100,
-    right: -100,
-  },
-
-  logo: {
+  title: {
     color: Colors.text,
-    fontSize: 38,
-    fontWeight: '900',
-    marginBottom: 8,
-    letterSpacing: 4,
+    fontSize: 34,
+    fontWeight: "900",
   },
 
   subtitle: {
-    color: Colors.muted,
+    color: Colors.textMuted,
+    marginTop: 10,
     marginBottom: 40,
     fontSize: 16,
   },
 
-  card: {
-    backgroundColor: '#0D1328EE',
-    borderRadius: 28,
-    padding: 24,
+  input: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    height: 58,
+    paddingHorizontal: 20,
+    color: Colors.text,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  link: {
-    color: Colors.secondary,
-    textAlign: 'center',
-    marginTop: 20,
-    fontWeight: '700',
+
+  button: {
+    backgroundColor: Colors.primary,
+    height: 58,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+  },
+
+  buttonText: {
+    color: "#000",
+    fontWeight: "800",
+    fontSize: 18,
   },
 });
