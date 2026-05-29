@@ -1,44 +1,45 @@
-import React from 'react';
-import {
-  createDrawerNavigator,
-} from '@react-navigation/drawer';
+import React from "react";
+import { createDrawerNavigator } from "@react-navigation/drawer";
 
-import HomeScreen from '../screens/HomeScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import EditProfileScreen from '../screens/EditProfileScreen';
+import DashboardScreen from "../screens/Dashboardscreen";
+import PlantationScreen from "../screens/PlantationScreen";
+import DetalhesPropriedadeScreen from "../screens/Detalhespropriedadescreen";
+import FormPropriedadeScreen from "../screens/Formpropriedadescreen";
+import AlertasScreen from "../screens/Alertasscreen";
+import ProfileScreen from "../screens/ProfileScreen";
+import EditProfileScreen from "../screens/EditProfileScreen";
+
+import SidebarMenu from "../components/SidebarMenu";
+import AppHeader from "../components/AppHeader";
 
 const Drawer = createDrawerNavigator();
 
 export default function DrawerNavigator() {
   return (
     <Drawer.Navigator
+      drawerContent={(props) => <SidebarMenu {...props} />}
       screenOptions={{
-        headerShown: false,
-        drawerStyle: {
-          backgroundColor: '#050816',
-        },
-        drawerActiveTintColor: '#00F5A0',
-        drawerInactiveTintColor: '#FFF',
+        header: ({ navigation }) => <AppHeader navigation={navigation} />,
       }}
     >
+      <Drawer.Screen name="Dashboard" component={DashboardScreen} />
+      <Drawer.Screen name="Propriedades" component={PlantationScreen} />
       <Drawer.Screen
-        name="Home"
-        component={HomeScreen}
+        name="DetalhesPropriedade"
+        component={DetalhesPropriedadeScreen}
+        options={{ drawerItemStyle: { display: "none" } }}
       />
-
       <Drawer.Screen
-        name="Perfil"
-        component={ProfileScreen}
+        name="NovaPropriedade"
+        component={FormPropriedadeScreen}
+        options={{ drawerItemStyle: { display: "none" } }}
       />
-
+      <Drawer.Screen name="Alertas" component={AlertasScreen} />
+      <Drawer.Screen name="Profile" component={ProfileScreen} />
       <Drawer.Screen
         name="EditProfile"
         component={EditProfileScreen}
-        options={{
-          drawerItemStyle: {
-            display: 'none',
-          },
-        }}
+        options={{ drawerItemStyle: { display: "none" } }}
       />
     </Drawer.Navigator>
   );
