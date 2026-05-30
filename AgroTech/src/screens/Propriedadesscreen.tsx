@@ -9,7 +9,6 @@ import { propriedadeService } from '../services/api';
 import { Propriedade } from '../types';
 import { EmptyState, LoadingOverlay, ScreenHeader } from '../components';
 
-// ── Mock ──────────────────────────────────────────────────────────────────────
 const MOCK: Propriedade[] = [
   { id: 1, nome: 'Fazenda São João',  localizacao: 'Ribeirão Preto, SP', cultura: 'Soja',  areaHectares: 320, produtorId: 1 },
   { id: 2, nome: 'Sítio Estrela',     localizacao: 'Londrina, PR',       cultura: 'Milho', areaHectares: 85,  produtorId: 1 },
@@ -52,19 +51,18 @@ function PropCard({ item, onPress, onDelete }: { item: Propriedade; onPress: () 
 const cardStyles = StyleSheet.create({
   card:       { backgroundColor: Colors.bgCard, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.border },
   header:     { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, marginBottom: Spacing.sm },
-  iconBox:    { width: 42, height: 42, borderRadius: Radius.sm, backgroundColor: Colors.bgSurface, justifyContent: 'center', alignItems: 'center' },
+  iconBox:    { width: 42, height: 42, borderRadius: Radius.md, backgroundColor: Colors.bgSurface, justifyContent: 'center', alignItems: 'center' },
   icon:       { fontSize: 20 },
   nome:       { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
   loc:        { fontSize: 12, color: Colors.textSecondary, marginTop: 3 },
   deleteBtn:  { padding: 4 },
   deleteIcon: { fontSize: 16 },
   footer:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  pill:       { backgroundColor: Colors.primaryGlow, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 3 },
+  pill:       { backgroundColor: Colors.bgSurface, borderRadius: Radius.lg, paddingHorizontal: 10, paddingVertical: 3 },
   pillText:   { fontSize: 11, color: Colors.primary, fontWeight: '600' },
   area:       { fontSize: 13, color: Colors.textSecondary },
 });
 
-// ── Tela principal ────────────────────────────────────────────────────────────
 export default function PropriedadesScreen({ navigation }: any) {
   const [itens,      setItens]      = useState<Propriedade[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -73,7 +71,6 @@ export default function PropriedadesScreen({ navigation }: any) {
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      // ⚠️  Substitua 1 pelo id do produtor logado
       const res = await propriedadeService.listar(1);
       setItens(res.data);
     } catch {

@@ -1,4 +1,4 @@
-// src/screens/FormPropriedadeScreen.tsx
+
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
@@ -10,14 +10,12 @@ import { propriedadeService } from '../services/api';
 import { Propriedade } from '../types';
 import { ScreenHeader } from '../components';
 
-// ── Chips de cultura ──────────────────────────────────────────────────────────
 const CULTURAS = ['Soja', 'Milho', 'Café', 'Cana', 'Arroz', 'Trigo', 'Algodão', 'Outra'];
 const CULT_ICON: Record<string, string> = {
   Soja: '🌱', Milho: '🌽', Café: '☕', Cana: '🎋',
   Arroz: '🍚', Trigo: '🌾', Algodão: '🤍', Outra: '🌿',
 };
 
-// ── Helpers de validação ──────────────────────────────────────────────────────
 interface FormState {
   nome: string;
   localizacao: string;
@@ -42,7 +40,6 @@ function validate(f: FormState): FormErrors {
   return e;
 }
 
-// ── Tela ──────────────────────────────────────────────────────────────────────
 export default function FormPropriedadeScreen({ route, navigation }: any) {
   const editing = route.params?.propriedade as Propriedade | undefined;
   const isEdit  = !!editing?.id;
@@ -73,7 +70,7 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
       localizacao:  form.localizacao.trim(),
       cultura:      form.cultura,
       areaHectares: parseFloat(form.areaHectares),
-      produtorId:   1, // ⚠️  substituir pelo id do produtor logado
+      produtorId:   1, 
     };
 
     try {
@@ -112,7 +109,6 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Nome ── */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Nome da Fazenda *</Text>
             <View style={[styles.inputBox, errors.nome ? styles.inputError : null]}>
@@ -129,7 +125,6 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
             {errors.nome ? <Text style={styles.errText}>{errors.nome}</Text> : null}
           </View>
 
-          {/* ── Localização ── */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Localização *</Text>
             <View style={[styles.inputBox, errors.localizacao ? styles.inputError : null]}>
@@ -146,7 +141,6 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
             {errors.localizacao ? <Text style={styles.errText}>{errors.localizacao}</Text> : null}
           </View>
 
-          {/* ── Área ── */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Área (hectares) *</Text>
             <View style={[styles.inputBox, errors.areaHectares ? styles.inputError : null]}>
@@ -165,7 +159,6 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
             {errors.areaHectares ? <Text style={styles.errText}>{errors.areaHectares}</Text> : null}
           </View>
 
-          {/* ── Cultura (chips) ── */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Cultura Plantada *</Text>
             {errors.cultura ? <Text style={styles.errText}>{errors.cultura}</Text> : null}
@@ -187,7 +180,6 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
             </View>
           </View>
 
-          {/* ── Preview ── */}
           {form.nome.trim() && form.cultura && (
             <View style={styles.preview}>
               <Text style={styles.previewTitle}>Prévia</Text>
@@ -197,7 +189,6 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
             </View>
           )}
 
-          {/* ── Botão ── */}
           <TouchableOpacity
             style={[styles.submitBtn, loading && styles.submitDisabled]}
             onPress={handleSubmit}
@@ -237,8 +228,8 @@ const styles = StyleSheet.create({
   errText:    { fontSize: 11, color: Colors.accentRed, marginTop: 5 },
 
   chipsGrid:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  chip:            { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.bgCard, borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1.5, borderColor: Colors.border },
-  chipSelected:    { borderColor: Colors.primary, backgroundColor: Colors.primaryGlow },
+  chip:            { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.bgCard, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1.5, borderColor: Colors.border },
+  chipSelected:    { borderColor: Colors.primary, backgroundColor: Colors.bgSurface },
   chipIcon:        { fontSize: 14 },
   chipText:        { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
   chipTextSelected:{ color: Colors.primary, fontWeight: '700' },

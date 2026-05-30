@@ -1,11 +1,13 @@
-// src/types/index.ts
-
 export interface Produtor {
   id: number;
   nome: string;
-  email: string;
+  email?: string;
   cpf: string;
   telefone?: string;
+  dtCadastro?: string;
+  tipoPlantacao?: string;
+  tamanhoFazenda?: number;
+  regiao?: string;
   createdAt?: string;
 }
 
@@ -13,7 +15,7 @@ export interface Propriedade {
   id: number;
   nome: string;
   localizacao: string;
-  cultura: string;       // ex: "Soja", "Milho", "Café"
+  cultura: string;
   areaHectares: number;
   produtorId: number;
   createdAt?: string;
@@ -22,44 +24,52 @@ export interface Propriedade {
 export interface LeituraSatelital {
   id: number;
   propriedadeId: number;
-  ndvi: number;          // 0.0 a 1.0
-  temperatura: number;   // °C
-  umidade: number;       // %
-  dataLeitura: string;   // ISO date string
+  ndvi: number;
+  temperatura: number;
+  umidade: number;
+  dataLeitura: string;
+  statusSolo?: string;
 }
 
 export interface Alerta {
   id: number;
   propriedadeId: number;
-  tipo: 'SECA' | 'PRAGA' | 'EXCESSO_CHUVA' | 'NDVI_BAIXO';
-  descricao: string;
-  nivel: 'BAIXO' | 'MEDIO' | 'ALTO';
+  tipo: 'praga' | 'clima' | 'seca' | 'ndvi_baixo';
+  mensagem: string;
+  gravidade: 'alta' | 'média' | 'baixa';
   ativo: boolean;
   createdAt: string;
 }
 
-export type RiscoNivel = 'BAIXO' | 'MÉDIO' | 'ALTO';
+export type RiscoNivel = 'baixo' | 'médio' | 'alto';
 
-// Navigation param lists
 export type RootStackParamList = {
-  Login:       undefined;
-  MainTabs:    undefined;
+  Login: undefined;
+  Register: undefined;
+  Dashboard: undefined;
+  MainTabs: undefined;
 };
 
 export type TabParamList = {
-  Dashboard:    undefined;
+  Dashboard: undefined;
   Propriedades: undefined;
-  Alertas:      undefined;
-  Perfil:       undefined;
+  Alertas: undefined;
+  Perfil: undefined;
 };
 
 export type PropriedadesStackParamList = {
-  ListaPropriedades:    undefined;
-  DetalhesPropriedade:  { propriedadeId: number; nome: string };
-  FormPropriedade:      { propriedade?: Propriedade };
+  ListaPropriedades: undefined;
+  DetalhesPropriedade: { propriedadeId: number; nome: string };
+  FormPropriedade: { propriedade?: Propriedade };
 };
 
-// API response wrappers
+export interface DashboardLeitura {
+  propriedadeId: number;
+  nome: string;
+  leitura: LeituraSatelital;
+  risco: RiscoNivel | string;
+}
+
 export interface ApiResponse<T> {
   data: T;
   message?: string;

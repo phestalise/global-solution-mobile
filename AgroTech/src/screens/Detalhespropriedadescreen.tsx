@@ -26,27 +26,25 @@ const genMockLeituras = (propId: number): LeituraSatelital[] =>
     ndvi: parseFloat((0.4 + Math.random() * 0.45).toFixed(2)),
     temperatura: Math.round(24 + Math.random() * 12),
     umidade: Math.round(40 + Math.random() * 40),
-    dataLeitura: new Date(
-      Date.now() - i * 86_400_000
-    ).toISOString(),
+    dataLeitura: new Date(Date.now() - i * 86_400_000).toISOString(),
   }));
 
 const genMockAlertas = (propId: number): Alerta[] => [
   {
     id: 1,
     propriedadeId: propId,
-    tipo: 'NDVI_BAIXO',
-    descricao: 'NDVI abaixo de 0.3 detectado na área norte.',
-    nivel: 'ALTO',
+    tipo: 'praga',
+    mensagem: 'NDVI abaixo de 0.3 detectado na área norte.',
+    gravidade: 'alta',
     ativo: true,
     createdAt: new Date().toISOString(),
   },
   {
     id: 2,
     propriedadeId: propId,
-    tipo: 'SECA',
-    descricao: 'Umidade do solo abaixo de 35% há 3 dias.',
-    nivel: 'MEDIO',
+    tipo: 'clima',
+    mensagem: 'Umidade do solo abaixo de 35% há 3 dias.',
+    gravidade: 'média',
     ativo: true,
     createdAt: new Date(Date.now() - 86_400_000).toISOString(),
   },
@@ -69,7 +67,6 @@ function MiniBarChart({
   return (
     <View style={chartStyles.container}>
       <Text style={chartStyles.title}>{label}</Text>
-
       <View style={chartStyles.bars}>
         {data.map((v, i) => (
           <View key={i} style={chartStyles.barWrap}>
@@ -77,13 +74,11 @@ function MiniBarChart({
               {v}
               {unit}
             </Text>
-
             <View
               style={[
                 chartStyles.bar,
                 {
-                  height:
-                    (60 * (v - min)) / (max - min + 1) + 8,
+                  height: (60 * (v - min)) / (max - min + 1) + 8,
                   backgroundColor: color,
                 },
               ]}
@@ -102,7 +97,6 @@ const chartStyles = StyleSheet.create({
     padding: Spacing.md,
     marginBottom: Spacing.sm,
   },
-
   title: {
     fontSize: 12,
     color: Colors.textSecondary,
@@ -110,25 +104,21 @@ const chartStyles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
-
   bars: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     height: 80,
   },
-
   barWrap: {
     alignItems: 'center',
     flex: 1,
     gap: 4,
   },
-
   barVal: {
     fontSize: 9,
     color: Colors.textMuted,
   },
-
   bar: {
     width: '60%',
     borderRadius: 3,
@@ -144,57 +134,37 @@ function AlertaCard({
   onResolve: () => void;
 }) {
   const colors: Record<string, string> = {
-    ALTO: Colors.accentRed,
-    MEDIO: Colors.accent,
-    BAIXO: Colors.primary,
+    alta: Colors.accentRed,
+    média: Colors.accent,
+    baixa: Colors.primary,
   };
 
   const icons: Record<string, string> = {
-    NDVI_BAIXO: '🌿',
-    SECA: '🔥',
-    PRAGA: '🐛',
-    EXCESSO_CHUVA: '🌊',
+    praga: '🐛',
+    clima: '🌊',
+    seca: '🔥',
+    ndvi_baixo: '🌿',
   };
 
-  const c = colors[alerta.nivel] ?? Colors.primary;
+  const c = colors[alerta.gravidade] ?? Colors.primary;
 
   return (
-    <View
-      style={[
-        alertCardStyles.card,
-        { borderLeftColor: c },
-      ]}
-    >
+    <View style={[alertCardStyles.card, { borderLeftColor: c }]}>
       <View style={alertCardStyles.row}>
         <Text style={alertCardStyles.icon}>
           {icons[alerta.tipo] ?? '⚠️'}
         </Text>
-
         <View style={{ flex: 1 }}>
-          <Text style={alertCardStyles.desc}>
-            {alerta.descricao}
-          </Text>
-
+          <Text style={alertCardStyles.desc}>{alerta.mensagem}</Text>
           <Text style={alertCardStyles.date}>
-            {new Date(alerta.createdAt).toLocaleDateString(
-              'pt-BR'
-            )}
+            {new Date(alerta.createdAt).toLocaleDateString('pt-BR')}
           </Text>
         </View>
-
         <TouchableOpacity
           onPress={onResolve}
-          style={[
-            alertCardStyles.resolveBtn,
-            { borderColor: c },
-          ]}
+          style={[alertCardStyles.resolveBtn, { borderColor: c }]}
         >
-          <Text
-            style={[
-              alertCardStyles.resolveText,
-              { color: c },
-            ]}
-          >
+          <Text style={[alertCardStyles.resolveText, { color: c }]}>
             Resolver
           </Text>
         </TouchableOpacity>
@@ -213,37 +183,31 @@ const alertCardStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
   },
-
   icon: {
     fontSize: 20,
   },
-
   desc: {
     fontSize: 13,
     color: Colors.textPrimary,
     lineHeight: 18,
     flex: 1,
   },
-
   date: {
     fontSize: 11,
     color: Colors.textMuted,
     marginTop: 3,
   },
-
   resolveBtn: {
     borderWidth: 1,
     borderRadius: Radius.sm,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-
   resolveText: {
     fontSize: 11,
     fontWeight: '700',
@@ -259,45 +223,28 @@ export default function DetalhesPropriedadeScreen({
     nome: string;
   };
 
-  const [leituras, setLeituras] = useState<
-    LeituraSatelital[]
-  >([]);
-
+  const [leituras, setLeituras] = useState<LeituraSatelital[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
-
   const [loading, setLoading] = useState(true);
-
-  const [refreshing, setRefreshing] =
-    useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(
     async (silent = false) => {
-      if (!silent) {
-        setLoading(true);
-      }
-
+      if (!silent) setLoading(true);
       try {
         const [lRes, aRes] = await Promise.all([
           leituraService.listar(propriedadeId, 7),
           alertaService.listar(1),
         ]);
-
         setLeituras(lRes.data as LeituraSatelital[]);
-
         setAlertas(
           (aRes.data as Alerta[]).filter(
-            (a: Alerta) =>
-              a.propriedadeId === propriedadeId
+            (a: Alerta) => a.propriedadeId === propriedadeId
           )
         );
       } catch {
-        setLeituras(
-          genMockLeituras(propriedadeId)
-        );
-
-        setAlertas(
-          genMockAlertas(propriedadeId)
-        );
+        setLeituras(genMockLeituras(propriedadeId));
+        setAlertas(genMockAlertas(propriedadeId));
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -311,19 +258,11 @@ export default function DetalhesPropriedadeScreen({
   }, [load]);
 
   const ultima = leituras[0];
-
   let risco = 'BAIXO';
-
   if (ultima) {
-    if (
-      ultima.ndvi < 0.3 ||
-      ultima.umidade < 35
-    ) {
+    if (ultima.ndvi < 0.3 || ultima.umidade < 35) {
       risco = 'ALTO';
-    } else if (
-      ultima.ndvi < 0.5 ||
-      ultima.temperatura > 34
-    ) {
+    } else if (ultima.ndvi < 0.5 || ultima.temperatura > 34) {
       risco = 'MÉDIO';
     }
   }
@@ -331,15 +270,8 @@ export default function DetalhesPropriedadeScreen({
   const handleResolve = async (id: number) => {
     try {
       await alertaService.resolver(id);
-
-      setAlertas((prev) =>
-        prev.filter((a) => a.id !== id)
-      );
-    } catch {
-      setAlertas((prev) =>
-        prev.filter((a) => a.id !== id)
-      );
-    }
+    } catch {}
+    setAlertas((prev) => prev.filter((a) => a.id !== id));
   };
 
   if (loading) {
@@ -356,24 +288,15 @@ export default function DetalhesPropriedadeScreen({
           <TouchableOpacity
             style={styles.editBtn}
             onPress={() =>
-              navigation.navigate(
-                'FormPropriedade',
-                {
-                  propriedade: {
-                    id: propriedadeId,
-                    nome,
-                  },
-                }
-              )
+              navigation.navigate('FormPropriedade', {
+                propriedade: { id: propriedadeId, nome },
+              })
             }
           >
-            <Text style={styles.editText}>
-              Editar
-            </Text>
+            <Text style={styles.editText}>Editar</Text>
           </TouchableOpacity>
         }
       />
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -388,22 +311,13 @@ export default function DetalhesPropriedadeScreen({
         }
       >
         <View style={styles.riscoBanner}>
-          <Text style={styles.riscoLabel}>
-            Nível de Risco Atual
-          </Text>
-
-          <RiscoIndicator
-            nivel={risco}
-            size="lg"
-          />
+          <Text style={styles.riscoLabel}>Nível de Risco Atual</Text>
+          <RiscoIndicator nivel={risco} size="lg" />
         </View>
 
         {ultima && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Última Leitura Satelital
-            </Text>
-
+            <Text style={styles.sectionTitle}>Última Leitura Satelital</Text>
             <View style={styles.statsGrid}>
               <StatCard
                 label="NDVI"
@@ -411,7 +325,6 @@ export default function DetalhesPropriedadeScreen({
                 accentColor={Colors.primary}
                 style={styles.statItem}
               />
-
               <StatCard
                 label="Temperatura"
                 value={ultima.temperatura}
@@ -419,7 +332,6 @@ export default function DetalhesPropriedadeScreen({
                 accentColor={Colors.accent}
                 style={styles.statItem}
               />
-
               <StatCard
                 label="Umidade"
                 value={ultima.umidade}
@@ -433,32 +345,21 @@ export default function DetalhesPropriedadeScreen({
 
         {leituras.length > 1 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Evolução (7 dias)
-            </Text>
-
+            <Text style={styles.sectionTitle}>Evolução (7 dias)</Text>
             <MiniBarChart
-              data={leituras
-                .map((l) => l.ndvi)
-                .reverse()}
+              data={leituras.map((l) => l.ndvi).reverse()}
               label="NDVI"
               unit=""
               color={Colors.primary}
             />
-
             <MiniBarChart
-              data={leituras
-                .map((l) => l.temperatura)
-                .reverse()}
+              data={leituras.map((l) => l.temperatura).reverse()}
               label="TEMPERATURA (°C)"
               unit="°"
               color={Colors.accent}
             />
-
             <MiniBarChart
-              data={leituras
-                .map((l) => l.umidade)
-                .reverse()}
+              data={leituras.map((l) => l.umidade).reverse()}
               label="UMIDADE (%)"
               unit="%"
               color={Colors.accentBlue}
@@ -470,12 +371,10 @@ export default function DetalhesPropriedadeScreen({
           <Text style={styles.sectionTitle}>
             Alertas Ativos ({alertas.length})
           </Text>
-
           {alertas.length === 0 ? (
             <View style={styles.noAlert}>
               <Text style={styles.noAlertText}>
-                ✅ Nenhum alerta ativo.
-                Lavoura saudável!
+                ✅ Nenhum alerta ativo. Lavoura saudável!
               </Text>
             </View>
           ) : (
@@ -483,17 +382,12 @@ export default function DetalhesPropriedadeScreen({
               <AlertaCard
                 key={a.id}
                 alerta={a}
-                onResolve={() =>
-                  handleResolve(a.id)
-                }
+                onResolve={() => handleResolve(a.id)}
               />
             ))
           )}
         </View>
-
-        <View
-          style={{ height: Spacing.xl }}
-        />
+        <View style={{ height: Spacing.xl }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -504,7 +398,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bg,
   },
-
   editBtn: {
     backgroundColor: Colors.bgSurface,
     borderRadius: Radius.sm,
@@ -513,12 +406,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-
   editText: {
     fontSize: 13,
     color: Colors.textSecondary,
   },
-
   riscoBanner: {
     marginHorizontal: Spacing.lg,
     backgroundColor: Colors.bgCard,
@@ -531,33 +422,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-
   riscoLabel: {
     fontSize: 13,
     color: Colors.textSecondary,
   },
-
   section: {
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
   },
-
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
   },
-
   statsGrid: {
     flexDirection: 'row',
     gap: 8,
   },
-
   statItem: {
     flex: 1,
   },
-
   noAlert: {
     backgroundColor: Colors.bgCard,
     borderRadius: Radius.md,
@@ -565,7 +450,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-
   noAlertText: {
     color: Colors.primary,
     fontSize: 14,

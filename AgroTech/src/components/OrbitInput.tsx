@@ -1,12 +1,23 @@
 import React from 'react';
-import { TextInput, StyleSheet } from 'react-native';
+import { TextInput, StyleSheet, StyleProp, TextStyle } from 'react-native';
 import { Colors } from '../styles/colors';
 
-export default function OrbitInput(props: any) {
+interface OrbitInputProps {
+  style?: StyleProp<TextStyle>;
+  placeholderTextColor?: string;
+
+  [key: string]: any;
+}
+
+export default function OrbitInput({
+  style,
+  placeholderTextColor = Colors.textMuted, 
+  ...props
+}: OrbitInputProps) {
   return (
     <TextInput
-      placeholderTextColor={Colors.muted}
-      style={styles.input}
+      placeholderTextColor={placeholderTextColor}
+      style={[styles.input, style]}   
       {...props}
     />
   );
