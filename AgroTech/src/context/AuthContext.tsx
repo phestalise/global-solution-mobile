@@ -1,21 +1,50 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Produtor } from '../types';
 
-type AuthContextType = {
+interface AuthContextType {
   isAuthenticated: boolean;
-  signIn: () => void;
-  signOut: () => void;
-};
+  produtor: Produtor | null;
+  login: (produtor: Produtor) => Promise<void>;
+  logout: () => Promise<void>;
+}
 
-export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+const AuthContext = createContext<AuthContextType>({
+  isAuthenticated: false,
+  produtor: null,
+  login: async () => {},
+  logout: async () => {},
+});
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [produtor, setProdutor] = useState<Produtor | null>(null);
 
-  const signIn = () => setIsAuthenticated(true);
-  const signOut = () => setIsAuthenticated(false);
+  useEffect(() => {
+    const load = async () => {
+      const json = await AsyncStorage.getItem('produtor');
+      if (json) {
+        setProdutor(JSON.parse(json));
+        setIsAuthenticated(true);
+      }
+    };
+    load();
+  }, []);
+
+  const login = async (p: Produtor) => {
+    await AsyncStorage.setItem('produtor', JSON.stringify(p));
+    setProdutor(p);
+    setIsAuthenticated(true);
+  };
+
+  const logout = async () => {
+    await AsyncStorage.removeItem('produtor');
+    setProdutor(null);
+    setIsAuthenticated(false);
+  };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, signIn, signOut }}>
+    <AuthContext.Provider value={{ isAuthenticated, produtor, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

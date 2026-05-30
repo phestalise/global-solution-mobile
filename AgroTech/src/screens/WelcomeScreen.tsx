@@ -10,14 +10,24 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../styles/colors";
-import { useAuth } from "../context/AuthContext"; // 👈 importe o hook de autenticação
+import { useAuth } from "../context/AuthContext";
 
 export default function WelcomeScreen({ navigation }: any) {
-  const { signIn } = useAuth(); // 👈 obtenha a função signIn
+  const { login } = useAuth();
 
   // Função para login de teste (sem API)
   const handleTestLogin = () => {
-    signIn(); // 👈 muda isAuthenticated para true → AppNavigator renderiza DrawerNavigator
+    const produtorMock = {
+      id: 999,
+      nome: "Usuário Teste",
+      cpf: "00000000000",
+      email: "",
+      telefone: "",
+      tipoPlantacao: "",
+      tamanhoFazenda: 0,
+      regiao: "",
+    };
+    login(produtorMock);
   };
 
   return (
