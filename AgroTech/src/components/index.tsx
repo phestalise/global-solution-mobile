@@ -1,4 +1,3 @@
-// src/components/index.tsx
 import React from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
@@ -7,7 +6,6 @@ import {
 import { Colors, Radius, Spacing } from '../styles/colors';
 import type { RiscoNivel } from '../types';
 
-// ── Risco Indicator (verde / amarelo / vermelho) ──────────────────────────────
 interface RiscoProps {
   nivel: RiscoNivel | string;
   showLabel?: boolean;
@@ -43,7 +41,7 @@ const riscoStyles = StyleSheet.create({
   label: { fontSize: 11, fontWeight: '700', letterSpacing: 1 },
 });
 
-// ── Stat Card ─────────────────────────────────────────────────────────────────
+
 interface StatCardProps {
   label: string;
   value: string | number;
@@ -79,7 +77,7 @@ const statStyles = StyleSheet.create({
   unit:     { fontSize: 12, color: Colors.textSecondary, marginBottom: 2 },
 });
 
-// ── Screen Header ─────────────────────────────────────────────────────────────
+
 interface HeaderProps {
   title: string;
   subtitle?: string;
@@ -122,7 +120,7 @@ const headerStyles = StyleSheet.create({
   subtitle: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
 });
 
-// ── Button ────────────────────────────────────────────────────────────────────
+
 interface ButtonProps {
   label: string;
   onPress: () => void;
@@ -166,7 +164,6 @@ const btnStyles = StyleSheet.create({
   label:    { fontSize: 15, fontWeight: '700', color: Colors.bg, letterSpacing: 0.5 },
 });
 
-// ── Input Field ───────────────────────────────────────────────────────────────
 interface InputProps {
   label: string;
   value: string;
@@ -185,12 +182,12 @@ export function InputField({ label, value, onChangeText, placeholder, secureText
       <Text style={inputStyles.label}>{label}</Text>
       <View style={[inputStyles.box, focused && inputStyles.boxFocused, !!error && inputStyles.boxError]}>
         <View
-          // @ts-ignore — workaround for TextInput focus style
+
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
         >
           <Text
-            // Using View+Text trick isn't valid for input, so we use TextInput below
+
           />
         </View>
         <TextInputCompat
@@ -210,7 +207,7 @@ export function InputField({ label, value, onChangeText, placeholder, secureText
   );
 }
 
-// TextInput import helper to avoid cycle
+
 import { TextInput as TextInputCompat } from 'react-native';
 
 const inputStyles = StyleSheet.create({
@@ -223,7 +220,7 @@ const inputStyles = StyleSheet.create({
   error:      { fontSize: 11, color: Colors.accentRed, marginTop: 4 },
 });
 
-// ── Empty State ───────────────────────────────────────────────────────────────
+
 export function EmptyState({ message, icon = '🌾' }: { message: string; icon?: string }) {
   return (
     <View style={emptyStyles.container}>
@@ -239,7 +236,7 @@ const emptyStyles = StyleSheet.create({
   text:      { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
 });
 
-// ── Loading Screen ────────────────────────────────────────────────────────────
+
 export function LoadingOverlay() {
   return (
     <View style={loadStyles.container}>

@@ -9,7 +9,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { DrawerContentComponentProps } from "@react-navigation/drawer";
 
-// Mapeamento de rotas → ícones e labels
 const MENU_ITEMS = [
   { label: "Dashboard", icon: "grid", route: "Dashboard" },
   { label: "Minhas Propriedades", icon: "leaf", route: "Propriedades" },
@@ -21,40 +20,49 @@ const MENU_ITEMS = [
 export default function SidebarMenu({ navigation }: DrawerContentComponentProps) {
   return (
     <View style={styles.container}>
-      {/* Cabeçalho do menu */}
       <View style={styles.header}>
         <Ionicons name="planet" size={44} color="#00F5A0" />
         <Text style={styles.appName}>AgroTech</Text>
         <Text style={styles.slogan}>Monitoramento orbital</Text>
       </View>
 
-      {/* Itens de navegação */}
       <ScrollView style={styles.menuItems}>
-        {MENU_ITEMS.map((item, index) => (
+        {MENU_ITEMS.map((item) => (
           <TouchableOpacity
-            key={index}
+            key={item.route}
             style={styles.menuItem}
             onPress={() => navigation.navigate(item.route)}
-            activeOpacity={0.7}
           >
-            <Ionicons name={item.icon as any} size={22} color="#FFF" style={styles.menuIcon} />
+            <Ionicons
+              name={item.icon as any}
+              size={22}
+              color="#FFF"
+              style={styles.menuIcon}
+            />
             <Text style={styles.menuLabel}>{item.label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* Rodapé com Logout */}
+      {/* LOGOUT CORRETO */}
       <TouchableOpacity
         style={styles.logoutButton}
         onPress={() => {
-          // Aqui você pode chamar o AuthContext para deslogar
-          // Ex: authContext.signOut();
-          navigation.navigate("Welcome"); // ou navegar para tela de login
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Login" }], // ou sua tela inicial de auth
+          });
         }}
-        activeOpacity={0.7}
       >
-        <Ionicons name="log-out-outline" size={22} color="#F44336" style={styles.menuIcon} />
-        <Text style={[styles.menuLabel, { color: "#F44336" }]}>Sair</Text>
+        <Ionicons
+          name="log-out-outline"
+          size={22}
+          color="#F44336"
+          style={styles.menuIcon}
+        />
+        <Text style={[styles.menuLabel, { color: "#F44336" }]}>
+          Sair
+        </Text>
       </TouchableOpacity>
     </View>
   );

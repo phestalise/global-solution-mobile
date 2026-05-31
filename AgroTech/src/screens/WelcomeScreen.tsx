@@ -15,17 +15,15 @@ import { useAuth } from "../context/AuthContext";
 export default function WelcomeScreen({ navigation }: any) {
   const { login } = useAuth();
 
-  // Função para login de teste (sem API)
   const handleTestLogin = () => {
     const produtorMock = {
       id: 999,
       nome: "Usuário Teste",
       cpf: "00000000000",
+      estado: "SP",
+      cidade: "São Paulo",
       email: "",
       telefone: "",
-      tipoPlantacao: "",
-      tamanhoFazenda: 0,
-      regiao: "",
     };
     login(produtorMock);
   };
@@ -74,7 +72,7 @@ export default function WelcomeScreen({ navigation }: any) {
             </View>
           </View>
 
-          {/* BOTÕES */}
+          
           <View style={styles.buttons}>
             <TouchableOpacity
               style={styles.loginButton}

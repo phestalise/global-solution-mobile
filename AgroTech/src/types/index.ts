@@ -1,13 +1,12 @@
 export interface Produtor {
   id: number;
   nome: string;
-  email?: string;
   cpf: string;
+  estado: string;
+  cidade: string;
+  email?: string;
   telefone?: string;
   dtCadastro?: string;
-  tipoPlantacao?: string;
-  tamanhoFazenda?: number;
-  regiao?: string;
   createdAt?: string;
 }
 

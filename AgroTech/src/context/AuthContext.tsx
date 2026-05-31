@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Produtor } from '../types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Produtor } from "../types";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -9,12 +9,9 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  isAuthenticated: false,
-  produtor: null,
-  login: async () => {},
-  logout: async () => {},
-});
+const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+
+const isWeb = typeof window !== "undefined";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -22,23 +19,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const load = async () => {
-      const json = await AsyncStorage.getItem('produtor');
+      if (isWeb) return;
+
+      const json = await AsyncStorage.getItem("produtor");
       if (json) {
-        setProdutor(JSON.parse(json));
+        const data = JSON.parse(json);
+        setProdutor(data);
         setIsAuthenticated(true);
       }
     };
+
     load();
   }, []);
 
   const login = async (p: Produtor) => {
-    await AsyncStorage.setItem('produtor', JSON.stringify(p));
+    if (!isWeb) {
+      await AsyncStorage.setItem("produtor", JSON.stringify(p));
+    }
+
     setProdutor(p);
     setIsAuthenticated(true);
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem('produtor');
+    if (!isWeb) {
+      await AsyncStorage.removeItem("produtor");
+    }
+
     setProdutor(null);
     setIsAuthenticated(false);
   };

@@ -8,36 +8,92 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../styles/colors";
 import { produtorService } from "../services/api";
 
+// Formata CPF: 12345678900 → 123.456.789-00
+function formatarCpf(valor: string): string {
+  const digits = valor.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0,3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6)}`;
+  return `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9)}`;
+}
+
+// Formata telefone: 11990012233 → (11)99001-2233
+function formatarTelefone(valor: string): string {
+  const digits = valor.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits.length ? `(${digits}` : "";
+  if (digits.length <= 6) return `(${digits.slice(0,2)})${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0,2)})${digits.slice(2,6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0,2)})${digits.slice(2,7)}-${digits.slice(7)}`;
+}
+
 export default function RegisterScreen({ navigation }: any) {
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
-  const [tipoPlantacao, setTipoPlantacao] = useState("");
-  const [tamanhoFazenda, setTamanhoFazenda] = useState("");
-  const [regiao, setRegiao] = useState("");
+  const [estado, setEstado] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const handleCpfChange = (text: string) => {
+    setCpf(formatarCpf(text));
+  };
+
+  const handleTelefoneChange = (text: string) => {
+    setTelefone(formatarTelefone(text));
+  };
+
   const handleRegister = async () => {
-    if (!nome.trim() || !cpf.trim()) {
-      Alert.alert("Campos obrigatórios", "Nome e CPF são necessários.");
+    const cpfDigits = cpf.replace(/\D/g, "");
+
+    if (!nome.trim() || !cpf.trim() || !estado.trim() || !cidade.trim()) {
+      Alert.alert("Campos obrigatórios", "Nome, CPF, Estado e Cidade são necessários.");
       return;
     }
 
+    if (cpfDigits.length !== 11) {
+      Alert.alert("CPF inválido", "Digite os 11 dígitos do CPF.");
+      return;
+    }
+
+    if (estado.trim().length !== 2) {
+      Alert.alert("Estado inválido", "Digite a sigla do estado com 2 letras (ex: SP).");
+      return;
+    }
+
+    // Envia CPF com máscara (123.456.789-00) pois o banco armazena assim
     const dados = {
-      nome,
-      cpf: cpf.replace(/\D/g, ""),
-      tipoPlantacao,
-      tamanhoFazenda: Number(tamanhoFazenda) || 0,
-      regiao,
+      nome: nome.trim(),
+      cpf: cpf,               // já formatado: 123.456.789-00
+      estado: estado.trim().toUpperCase(),
+      cidade: cidade.trim(),
+      email: email.trim() || "",
+      telefone: telefone.trim() || "",
     };
+
+    console.log("[Register] Enviando dados:", JSON.stringify(dados));
 
     setLoading(true);
     try {
-      await produtorService.create(dados);
+      const response = await produtorService.create(dados);
+      console.log("[Register] Resposta:", response.data);
       Alert.alert("Sucesso", "Cadastro realizado! Faça login com seu CPF.", [
         { text: "OK", onPress: () => navigation.navigate("Login") },
       ]);
     } catch (error: any) {
-      Alert.alert("Erro", error.message || "Falha no cadastro.");
+      // Loga o erro completo para diagnóstico
+      console.error("[Register] Erro completo:", error);
+      console.error("[Register] Response data:", error?.response?.data);
+      console.error("[Register] Status:", error?.response?.status);
+
+      const mensagem =
+        error?.response?.data?.message ||
+        error?.response?.data?.title ||
+        error?.response?.data ||
+        error.message ||
+        "Falha no cadastro. Verifique os dados e tente novamente.";
+
+      Alert.alert("Erro no cadastro", String(mensagem));
     } finally {
       setLoading(false);
     }
@@ -45,7 +101,11 @@ export default function RegisterScreen({ navigation }: any) {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <LinearGradient colors={["#06111F", "#081B33", "#0A223D"]} style={styles.gradient}>
           <View style={styles.container}>
             <View style={styles.header}>
@@ -53,33 +113,90 @@ export default function RegisterScreen({ navigation }: any) {
                 <Ionicons name="leaf" size={40} color={Colors.primary} />
               </View>
               <Text style={styles.title}>Criar Conta</Text>
-              <Text style={styles.subtitle}>Cadastro agrícola inteligente</Text>
+              <Text style={styles.subtitle}>Cadastro de produtor</Text>
             </View>
 
             <View style={styles.form}>
               <View style={styles.inputContainer}>
                 <Ionicons name="person-outline" size={20} color="#7E8A97" style={styles.icon} />
-                <TextInput placeholder="Nome do produtor" placeholderTextColor="#7E8A97" value={nome} onChangeText={setNome} style={styles.input} editable={!loading} />
+                <TextInput
+                  placeholder="Nome completo"
+                  placeholderTextColor="#7E8A97"
+                  value={nome}
+                  onChangeText={setNome}
+                  style={styles.input}
+                  editable={!loading}
+                  autoCapitalize="words"
+                />
               </View>
 
               <View style={styles.inputContainer}>
                 <Ionicons name="card-outline" size={20} color="#7E8A97" style={styles.icon} />
-                <TextInput placeholder="CPF (apenas números)" placeholderTextColor="#7E8A97" value={cpf} onChangeText={(t) => setCpf(t.replace(/\D/g, ""))} keyboardType="numeric" maxLength={11} style={styles.input} editable={!loading} />
+                <TextInput
+                  placeholder="CPF (000.000.000-00)"
+                  placeholderTextColor="#7E8A97"
+                  value={cpf}
+                  onChangeText={handleCpfChange}
+                  keyboardType="numeric"
+                  maxLength={14}
+                  style={styles.input}
+                  editable={!loading}
+                />
               </View>
 
               <View style={styles.inputContainer}>
-                <Ionicons name="flower-outline" size={20} color="#7E8A97" style={styles.icon} />
-                <TextInput placeholder="Tipo de plantação (ex: soja, milho)" placeholderTextColor="#7E8A97" value={tipoPlantacao} onChangeText={setTipoPlantacao} style={styles.input} editable={!loading} />
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Ionicons name="resize-outline" size={20} color="#7E8A97" style={styles.icon} />
-                <TextInput placeholder="Tamanho da fazenda (hectares)" placeholderTextColor="#7E8A97" value={tamanhoFazenda} onChangeText={setTamanhoFazenda} keyboardType="numeric" style={styles.input} editable={!loading} />
+                <Ionicons name="flag-outline" size={20} color="#7E8A97" style={styles.icon} />
+                <TextInput
+                  placeholder="Estado (ex: SP)"
+                  placeholderTextColor="#7E8A97"
+                  value={estado}
+                  onChangeText={(t) => setEstado(t.toUpperCase())}
+                  style={styles.input}
+                  editable={!loading}
+                  maxLength={2}
+                  autoCapitalize="characters"
+                />
               </View>
 
               <View style={styles.inputContainer}>
                 <Ionicons name="location-outline" size={20} color="#7E8A97" style={styles.icon} />
-                <TextInput placeholder="Região agrícola" placeholderTextColor="#7E8A97" value={regiao} onChangeText={setRegiao} style={styles.input} editable={!loading} />
+                <TextInput
+                  placeholder="Cidade"
+                  placeholderTextColor="#7E8A97"
+                  value={cidade}
+                  onChangeText={setCidade}
+                  style={styles.input}
+                  editable={!loading}
+                  autoCapitalize="words"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail-outline" size={20} color="#7E8A97" style={styles.icon} />
+                <TextInput
+                  placeholder="Email (opcional)"
+                  placeholderTextColor="#7E8A97"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  style={styles.input}
+                  editable={!loading}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Ionicons name="call-outline" size={20} color="#7E8A97" style={styles.icon} />
+                <TextInput
+                  placeholder="Telefone (opcional)"
+                  placeholderTextColor="#7E8A97"
+                  value={telefone}
+                  onChangeText={handleTelefoneChange}
+                  keyboardType="phone-pad"
+                  maxLength={15}
+                  style={styles.input}
+                  editable={!loading}
+                />
               </View>
 
               <TouchableOpacity

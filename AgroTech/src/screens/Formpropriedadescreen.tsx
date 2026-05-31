@@ -71,6 +71,8 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
       cultura:      form.cultura,
       areaHectares: parseFloat(form.areaHectares),
       produtorId:   1, 
+      
+
     };
 
     try {

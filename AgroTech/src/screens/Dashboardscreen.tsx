@@ -26,7 +26,7 @@ const MOCK_DATA = {
   ],
 };
 
-// Função para calcular o risco baseado no NDVI
+
 const calcularRisco = (ndvi: number) => {
   if (ndvi >= 0.6) return { nivel: "BAIXO", cor: "#4CAF50" };
   if (ndvi >= 0.3) return { nivel: "MÉDIO", cor: "#FFC107" };
