@@ -7,19 +7,13 @@ import {
   Alerta,
 } from "../types";
 
-
-
 const LOCAL_IP = "10.0.0.244";
 
 const BASE_URL = Platform.select({
   android: "http://10.0.2.2:8080/api",
   ios: `http://${LOCAL_IP}:8080/api`,
-  default: "http://localhost:8080/api", // WEB
+  default: "http://localhost:8080/api",
 });
-
-console.log("[API] BASE_URL:", BASE_URL);
-
-
 
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -29,50 +23,28 @@ const api: AxiosInstance = axios.create({
   },
 });
 
-
-
-api.interceptors.request.use((config) => {
-  console.log(
-    `[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
-    config.data ?? ""
-  );
-
-  return config;
-});
-
-
-
 api.interceptors.response.use(
-  (response) => {
-    console.log(`[API] Resposta ${response.status}:`, response.data);
-    return response;
-  },
+  (response) => response,
   (error: AxiosError) => {
-    console.error("[API] Erro:", error.message);
-    console.error("[API] Status:", error.response?.status);
-    console.error("[API] Data:", error.response?.data);
-    console.error("[API] Code:", error.code);
-
-    const backendMsg =
-      (error.response?.data as any)?.message ||
-      (error.response?.data as any)?.title ||
-      (error.response?.data as any)?.error ||
+    const data = error.response?.data as any;
+    const msg =
+      data?.message ||
+      data?.title ||
+      data?.error ||
       error.message ||
       "Erro de conexão com o servidor";
-
-    return Promise.reject(new Error(backendMsg));
+    return Promise.reject(new Error(msg));
   }
 );
 
-
-
 const cleanCpf = (cpf: string) => cpf.replace(/\D/g, "");
 
-
-
 export const produtorService = {
-  login: (cpf: string) =>
-    api.post<Produtor>("/Produtores/Login", cleanCpf(cpf)),
+  login: (cpf: string, senha: string) =>
+    api.post<Produtor>("/Produtores/Login", {
+      cpf: cleanCpf(cpf),
+      senha: senha,
+    }),
 
   getById: (id: number) =>
     api.get<Produtor>(`/Produtores/${id}`),
@@ -85,17 +57,12 @@ export const produtorService = {
       cpf: cleanCpf(data.cpf),
     }),
 
-  update: (
-    id: number,
-    data: Partial<Produtor>
-  ) =>
+  update: (id: number, data: Partial<Produtor>) =>
     api.put<Produtor>(`/Produtores/${id}`, {
       ...data,
       cpf: data.cpf ? cleanCpf(data.cpf) : undefined,
     }),
 };
-
-
 
 export const propriedadeService = {
   listar: (produtorId: number) =>
@@ -106,36 +73,24 @@ export const propriedadeService = {
   getById: (id: number) =>
     api.get<Propriedade>(`/propriedades/${id}`),
 
-  criar: (
-    data: Omit<Propriedade, "id" | "createdAt">
-  ) =>
+  criar: (data: Omit<Propriedade, "id" | "createdAt">) =>
     api.post<Propriedade>("/propriedades", data),
 
-  atualizar: (
-    id: number,
-    data: Partial<Propriedade>
-  ) =>
+  atualizar: (id: number, data: Partial<Propriedade>) =>
     api.put<Propriedade>(`/propriedades/${id}`, data),
 
   deletar: (id: number) =>
     api.delete(`/propriedades/${id}`),
 };
 
-
-
 export const leituraService = {
   listar: (propriedadeId: number, limit = 30) =>
     api.get<LeituraSatelital[]>("/leituras", {
-      params: {
-        propriedadeId,
-        limit,
-      },
+      params: { propriedadeId, limit },
     }),
 
   getUltima: (propriedadeId: number) =>
-    api.get<LeituraSatelital>(
-      `/leituras/ultima/${propriedadeId}`
-    ),
+    api.get<LeituraSatelital>(`/leituras/ultima/${propriedadeId}`),
 
   getDashboard: (produtorId: number) =>
     api.get<
@@ -150,18 +105,10 @@ export const leituraService = {
     }),
 };
 
-
-
 export const alertaService = {
-  listar: (
-    produtorId: number,
-    apenasAtivos = true
-  ) =>
+  listar: (produtorId: number, apenasAtivos = true) =>
     api.get<Alerta[]>("/alertas", {
-      params: {
-        produtorId,
-        ativo: apenasAtivos,
-      },
+      params: { produtorId, ativo: apenasAtivos },
     }),
 
   resolver: (id: number) =>

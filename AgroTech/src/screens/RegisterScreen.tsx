@@ -8,7 +8,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../styles/colors";
 import { produtorService } from "../services/api";
 
-// Formata CPF: 12345678900 → 123.456.789-00
 function formatarCpf(valor: string): string {
   const digits = valor.replace(/\D/g, "").slice(0, 11);
   if (digits.length <= 3) return digits;
@@ -17,7 +16,6 @@ function formatarCpf(valor: string): string {
   return `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9)}`;
 }
 
-// Formata telefone: 11990012233 → (11)99001-2233
 function formatarTelefone(valor: string): string {
   const digits = valor.replace(/\D/g, "").slice(0, 11);
   if (digits.length <= 2) return digits.length ? `(${digits}` : "";
@@ -33,15 +31,14 @@ export default function RegisterScreen({ navigation }: any) {
   const [cidade, setCidade] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [senha, setSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [secureText, setSecureText] = useState(true);
+  const [secureConfirm, setSecureConfirm] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const handleCpfChange = (text: string) => {
-    setCpf(formatarCpf(text));
-  };
-
-  const handleTelefoneChange = (text: string) => {
-    setTelefone(formatarTelefone(text));
-  };
+  const handleCpfChange = (text: string) => setCpf(formatarCpf(text));
+  const handleTelefoneChange = (text: string) => setTelefone(formatarTelefone(text));
 
   const handleRegister = async () => {
     const cpfDigits = cpf.replace(/\D/g, "");
@@ -61,38 +58,39 @@ export default function RegisterScreen({ navigation }: any) {
       return;
     }
 
-    // Envia CPF com máscara (123.456.789-00) pois o banco armazena assim
+    if (senha.length < 6) {
+      Alert.alert("Senha muito curta", "A senha deve ter no mínimo 6 caracteres.");
+      return;
+    }
+
+    if (senha !== confirmarSenha) {
+      Alert.alert("Senhas não conferem", "As senhas digitadas não são iguais.");
+      return;
+    }
+
     const dados = {
       nome: nome.trim(),
-      cpf: cpf,               // já formatado: 123.456.789-00
+      cpf: cpf,
       estado: estado.trim().toUpperCase(),
       cidade: cidade.trim(),
       email: email.trim() || "",
       telefone: telefone.trim() || "",
+      senha: senha,
     };
-
-    console.log("[Register] Enviando dados:", JSON.stringify(dados));
 
     setLoading(true);
     try {
-      const response = await produtorService.create(dados);
-      console.log("[Register] Resposta:", response.data);
-      Alert.alert("Sucesso", "Cadastro realizado! Faça login com seu CPF.", [
+      await produtorService.create(dados);
+      Alert.alert("Sucesso", "Cadastro realizado! Faça login com seu CPF e senha.", [
         { text: "OK", onPress: () => navigation.navigate("Login") },
       ]);
     } catch (error: any) {
-      // Loga o erro completo para diagnóstico
-      console.error("[Register] Erro completo:", error);
-      console.error("[Register] Response data:", error?.response?.data);
-      console.error("[Register] Status:", error?.response?.status);
-
       const mensagem =
         error?.response?.data?.message ||
         error?.response?.data?.title ||
         error?.response?.data ||
         error.message ||
-        "Falha no cadastro. Verifique os dados e tente novamente.";
-
+        "Falha no cadastro.";
       Alert.alert("Erro no cadastro", String(mensagem));
     } finally {
       setLoading(false);
@@ -101,11 +99,7 @@ export default function RegisterScreen({ navigation }: any) {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <LinearGradient colors={["#06111F", "#081B33", "#0A223D"]} style={styles.gradient}>
           <View style={styles.container}>
             <View style={styles.header}>
@@ -119,92 +113,51 @@ export default function RegisterScreen({ navigation }: any) {
             <View style={styles.form}>
               <View style={styles.inputContainer}>
                 <Ionicons name="person-outline" size={20} color="#7E8A97" style={styles.icon} />
-                <TextInput
-                  placeholder="Nome completo"
-                  placeholderTextColor="#7E8A97"
-                  value={nome}
-                  onChangeText={setNome}
-                  style={styles.input}
-                  editable={!loading}
-                  autoCapitalize="words"
-                />
+                <TextInput placeholder="Nome completo" placeholderTextColor="#7E8A97" value={nome} onChangeText={setNome} style={styles.input} editable={!loading} autoCapitalize="words" />
               </View>
 
               <View style={styles.inputContainer}>
                 <Ionicons name="card-outline" size={20} color="#7E8A97" style={styles.icon} />
-                <TextInput
-                  placeholder="CPF (000.000.000-00)"
-                  placeholderTextColor="#7E8A97"
-                  value={cpf}
-                  onChangeText={handleCpfChange}
-                  keyboardType="numeric"
-                  maxLength={14}
-                  style={styles.input}
-                  editable={!loading}
-                />
+                <TextInput placeholder="CPF (000.000.000-00)" placeholderTextColor="#7E8A97" value={cpf} onChangeText={handleCpfChange} keyboardType="numeric" maxLength={14} style={styles.input} editable={!loading} />
               </View>
 
               <View style={styles.inputContainer}>
                 <Ionicons name="flag-outline" size={20} color="#7E8A97" style={styles.icon} />
-                <TextInput
-                  placeholder="Estado (ex: SP)"
-                  placeholderTextColor="#7E8A97"
-                  value={estado}
-                  onChangeText={(t) => setEstado(t.toUpperCase())}
-                  style={styles.input}
-                  editable={!loading}
-                  maxLength={2}
-                  autoCapitalize="characters"
-                />
+                <TextInput placeholder="Estado (ex: SP)" placeholderTextColor="#7E8A97" value={estado} onChangeText={(t) => setEstado(t.toUpperCase())} style={styles.input} editable={!loading} maxLength={2} autoCapitalize="characters" />
               </View>
 
               <View style={styles.inputContainer}>
                 <Ionicons name="location-outline" size={20} color="#7E8A97" style={styles.icon} />
-                <TextInput
-                  placeholder="Cidade"
-                  placeholderTextColor="#7E8A97"
-                  value={cidade}
-                  onChangeText={setCidade}
-                  style={styles.input}
-                  editable={!loading}
-                  autoCapitalize="words"
-                />
+                <TextInput placeholder="Cidade" placeholderTextColor="#7E8A97" value={cidade} onChangeText={setCidade} style={styles.input} editable={!loading} autoCapitalize="words" />
               </View>
 
               <View style={styles.inputContainer}>
                 <Ionicons name="mail-outline" size={20} color="#7E8A97" style={styles.icon} />
-                <TextInput
-                  placeholder="Email (opcional)"
-                  placeholderTextColor="#7E8A97"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  style={styles.input}
-                  editable={!loading}
-                />
+                <TextInput placeholder="Email (opcional)" placeholderTextColor="#7E8A97" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" style={styles.input} editable={!loading} />
               </View>
 
               <View style={styles.inputContainer}>
                 <Ionicons name="call-outline" size={20} color="#7E8A97" style={styles.icon} />
-                <TextInput
-                  placeholder="Telefone (opcional)"
-                  placeholderTextColor="#7E8A97"
-                  value={telefone}
-                  onChangeText={handleTelefoneChange}
-                  keyboardType="phone-pad"
-                  maxLength={15}
-                  style={styles.input}
-                  editable={!loading}
-                />
+                <TextInput placeholder="Telefone (opcional)" placeholderTextColor="#7E8A97" value={telefone} onChangeText={handleTelefoneChange} keyboardType="phone-pad" maxLength={15} style={styles.input} editable={!loading} />
               </View>
 
-              <TouchableOpacity
-                style={[styles.registerButton, loading && { opacity: 0.7 }]}
-                onPress={handleRegister}
-                disabled={loading}
-                activeOpacity={0.85}
-              >
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed-outline" size={20} color="#7E8A97" style={styles.icon} />
+                <TextInput placeholder="Senha (mínimo 6 caracteres)" placeholderTextColor="#7E8A97" value={senha} onChangeText={setSenha} secureTextEntry={secureText} style={styles.input} editable={!loading} />
+                <TouchableOpacity onPress={() => setSecureText(!secureText)} style={styles.eyeIcon} disabled={loading}>
+                  <Ionicons name={secureText ? "eye-off-outline" : "eye-outline"} size={22} color="#7E8A97" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed-outline" size={20} color="#7E8A97" style={styles.icon} />
+                <TextInput placeholder="Confirmar senha" placeholderTextColor="#7E8A97" value={confirmarSenha} onChangeText={setConfirmarSenha} secureTextEntry={secureConfirm} style={styles.input} editable={!loading} />
+                <TouchableOpacity onPress={() => setSecureConfirm(!secureConfirm)} style={styles.eyeIcon} disabled={loading}>
+                  <Ionicons name={secureConfirm ? "eye-off-outline" : "eye-outline"} size={22} color="#7E8A97" />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity style={[styles.registerButton, loading && { opacity: 0.7 }]} onPress={handleRegister} disabled={loading} activeOpacity={0.85}>
                 {loading ? (
                   <ActivityIndicator color="#000" size="small" />
                 ) : (
@@ -241,6 +194,7 @@ const styles = StyleSheet.create({
   inputContainer: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.card, borderRadius: 16, height: 56, marginBottom: 16, borderWidth: 1, borderColor: Colors.border },
   icon: { marginLeft: 16, marginRight: 10 },
   input: { flex: 1, color: Colors.text, fontSize: 16, height: "100%" },
+  eyeIcon: { padding: 12 },
   registerButton: { backgroundColor: Colors.primary, height: 56, borderRadius: 16, justifyContent: "center", alignItems: "center", flexDirection: "row", marginTop: 8, marginBottom: 14 },
   registerButtonText: { color: "#000", fontWeight: "800", fontSize: 18 },
   footer: { flexDirection: "row", justifyContent: "center", alignItems: "center", paddingBottom: 20 },

@@ -11,6 +11,8 @@ import { useAuth } from "../context/AuthContext";
 
 export default function LoginScreen({ navigation }: any) {
   const [cpf, setCpf] = useState("");
+  const [senha, setSenha] = useState("");
+  const [secureText, setSecureText] = useState(true);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
@@ -21,11 +23,17 @@ export default function LoginScreen({ navigation }: any) {
       return;
     }
 
+    if (!senha.trim()) {
+      Alert.alert("Senha obrigatória", "Informe sua senha.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await produtorService.login(cpfLimpo);
+
+      const response = await produtorService.login(cpfLimpo, senha);
       const produtor = response.data;
-      await login(produtor); // atualiza o contexto → isAuthenticated = true
+      await login(produtor);
     } catch (error: any) {
       Alert.alert("Erro", error.message || "Falha ao fazer login.");
     } finally {
@@ -43,10 +51,11 @@ export default function LoginScreen({ navigation }: any) {
                 <Ionicons name="person-circle-outline" size={60} color={Colors.primary} />
               </View>
               <Text style={styles.title}>Entrar</Text>
-              <Text style={styles.subtitle}>Informe seu CPF</Text>
+              <Text style={styles.subtitle}>Informe CPF e senha</Text>
             </View>
 
             <View style={styles.form}>
+              {/* CPF */}
               <View style={styles.inputContainer}>
                 <Ionicons name="card-outline" size={20} color="#7E8A97" style={styles.inputIcon} />
                 <TextInput
@@ -59,6 +68,31 @@ export default function LoginScreen({ navigation }: any) {
                   style={styles.input}
                   editable={!loading}
                 />
+              </View>
+
+              {/* Senha */}
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed-outline" size={20} color="#7E8A97" style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Senha"
+                  placeholderTextColor="#7E8A97"
+                  value={senha}
+                  onChangeText={setSenha}
+                  secureTextEntry={secureText}
+                  style={styles.input}
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  onPress={() => setSecureText(!secureText)}
+                  style={styles.eyeIcon}
+                  disabled={loading}
+                >
+                  <Ionicons
+                    name={secureText ? "eye-off-outline" : "eye-outline"}
+                    size={22}
+                    color="#7E8A97"
+                  />
+                </TouchableOpacity>
               </View>
 
               <TouchableOpacity
@@ -100,6 +134,7 @@ const styles = StyleSheet.create({
   inputContainer: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.card, borderRadius: 16, height: 58, marginBottom: 18, borderWidth: 1, borderColor: Colors.border },
   inputIcon: { marginLeft: 16, marginRight: 10 },
   input: { flex: 1, color: Colors.text, fontSize: 16, height: "100%" },
+  eyeIcon: { padding: 12 },
   loginButton: { backgroundColor: Colors.primary, height: 58, borderRadius: 16, justifyContent: "center", alignItems: "center", marginBottom: 16 },
   loginButtonText: { color: "#000", fontWeight: "800", fontSize: 18 },
   footer: { flexDirection: "row", justifyContent: "center", alignItems: "center", paddingBottom: 10 },
