@@ -7,6 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../styles/colors";
 import { produtorService } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 function formatarCpf(valor: string): string {
   const digits = valor.replace(/\D/g, "").slice(0, 11);
@@ -36,11 +37,14 @@ export default function RegisterScreen({ navigation }: any) {
   const [secureText, setSecureText] = useState(true);
   const [secureConfirm, setSecureConfirm] = useState(true);
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
   const handleCpfChange = (text: string) => setCpf(formatarCpf(text));
   const handleTelefoneChange = (text: string) => setTelefone(formatarTelefone(text));
 
   const handleRegister = async () => {
+    if (loading) return;
+
     const cpfDigits = cpf.replace(/\D/g, "");
 
     if (!nome.trim() || !cpf.trim() || !estado.trim() || !cidade.trim()) {
@@ -81,9 +85,8 @@ export default function RegisterScreen({ navigation }: any) {
     setLoading(true);
     try {
       await produtorService.create(dados);
-      Alert.alert("Sucesso", "Cadastro realizado! Faça login com seu CPF e senha.", [
-        { text: "OK", onPress: () => navigation.navigate("Login") },
-      ]);
+      const loginResponse = await produtorService.login(cpfDigits, senha);
+      await login(loginResponse.data);
     } catch (error: any) {
       const mensagem =
         error?.response?.data?.message ||

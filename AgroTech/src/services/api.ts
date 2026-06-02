@@ -26,9 +26,15 @@ const api: AxiosInstance = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    console.log("=== ERRO API ===");
+    console.log("STATUS:", error.response?.status);
+    console.log("DATA:", JSON.stringify(error.response?.data, null, 2));
+    console.log("================");
+
     const data = error.response?.data as any;
     const msg =
       data?.message ||
+      data?.detail ||
       data?.title ||
       data?.error ||
       error.message ||
@@ -50,7 +56,7 @@ export const produtorService = {
     api.get<Produtor>(`/Produtores/${id}`),
 
   create: (
-    data: Omit<Produtor, "id" | "dtCadastro" | "createdAt">
+    data: Omit<Produtor, "id" | "dtCadastro" | "createdAt"> & { senha: string }
   ) =>
     api.post<Produtor>("/Produtores/Cadastro", {
       ...data,
