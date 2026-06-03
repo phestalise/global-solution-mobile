@@ -1,107 +1,85 @@
 import React from 'react';
-
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
+  View, Text, TouchableOpacity, StyleSheet, Image,
 } from 'react-native';
-
 import { Ionicons } from '@expo/vector-icons';
 import { DrawerActions } from '@react-navigation/native';
 
 export default function AppHeader({ navigation }: any) {
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.menuButton}
-        onPress={() =>
-          navigation.dispatch(DrawerActions.openDrawer())
-        }
-      >
-        <Ionicons name="menu" size={24} color="#fff" />
-      </TouchableOpacity>
+    <View style={styles.wrapper}>
+      <View style={styles.container}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="menu" size={24} color="#fff" />
+        </TouchableOpacity>
 
-      <View style={styles.center}>
-        <Image
-          source={{
-            uri: 'https://cdn-icons-png.flaticon.com/512/2909/2909763.png',
-          }}
-          style={styles.logo}
-        />
-
-        <View>
-          <Text style={styles.title}>AgroTech</Text>
-
-          <Text style={styles.subtitle}>
-            Monitoramento Inteligente
-          </Text>
+        <View style={styles.center}>
+          <Image
+            source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2909/2909763.png' }}
+            style={styles.logo}
+          />
+          <View>
+            <Text style={styles.title}>AstroFarm</Text>
+            <Text style={styles.subtitle}>Monitoramento Orbital</Text>
+          </View>
         </View>
-      </View>
 
-      <TouchableOpacity style={styles.profile}>
-        <Ionicons
-          name="notifications-outline"
-          size={22}
-          color="#fff"
-        />
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+          <Ionicons name="notifications-outline" size={22} color="#fff" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    backgroundColor: '#060F1E',
+    paddingTop: 52,
+    paddingBottom: 12,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,245,160,0.1)',
+  },
   container: {
-    marginTop: 50,
-    marginHorizontal: 20,
-
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-
-  menuButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-
-    backgroundColor: 'rgba(255,255,255,0.12)',
-
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
-
   center: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
-
   logo: {
-    width: 42,
-    height: 42,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
   },
-
   title: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '800',
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.3,
   },
-
   subtitle: {
-    color: '#B7E4C7',
-    fontSize: 12,
-  },
-
-  profile: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-
-    backgroundColor: 'rgba(255,255,255,0.12)',
-
-    alignItems: 'center',
-    justifyContent: 'center',
+    color: '#00F5A0',
+    fontSize: 11,
+    fontWeight: '500',
+    letterSpacing: 0.3,
   },
 });

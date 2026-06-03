@@ -8,6 +8,7 @@ import FormPropriedadeScreen from "../screens/Formpropriedadescreen";
 import AlertasScreen from "../screens/Alertasscreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import EditProfileScreen from "../screens/EditProfileScreen";
+import RelatoriosScreen from "../screens/RelatoriosScreen";
 
 import SidebarMenu from "../components/SidebarMenu";
 import AppHeader from "../components/AppHeader";
@@ -35,6 +36,7 @@ export default function DrawerNavigator() {
         options={{ drawerItemStyle: { display: "none" } }}
       />
       <Drawer.Screen name="Alertas" component={AlertasScreen} />
+      <Drawer.Screen name="Relatorios" component={RelatoriosScreen} />
       <Drawer.Screen name="Profile" component={ProfileScreen} />
       <Drawer.Screen
         name="EditProfile"
