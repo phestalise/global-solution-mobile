@@ -81,3 +81,12 @@ export interface PaginatedResponse<T> {
   page: number;
   pageSize: number;
 }
+export interface LeituraSatelital {
+  id: number;
+  propriedadeId: number;
+  ndvi: number;
+  temperatura: number;
+  umidade: number;
+  dataLeitura: string;
+  statusSolo?: string;
+}

@@ -118,6 +118,16 @@ export const leituraService = {
     }[]>("/leituras/dashboard", {
       params: { produtorId },
     }),
+
+  // NOVO MÉTODO – POST /api/leituras
+  criar: (dados: {
+    idPropriedade: number;
+    ndvi?: number;
+    temperatura?: number;
+    umidade?: number;
+    precipitacao?: number;
+    fonteSatelite?: string;
+  }) => api.post<LeituraSatelital>("/leituras", dados),
 };
 
 export const alertaService = {
