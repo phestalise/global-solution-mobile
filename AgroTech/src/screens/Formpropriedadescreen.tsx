@@ -34,10 +34,10 @@ interface FormErrors {
 
 function validate(f: FormState): FormErrors {
   const e: FormErrors = {};
-  if (!f.nomeFazenda.trim())  e.nomeFazenda  = 'Nome da fazenda é obrigatório';
+  if (!f.nomeFazenda.trim()) e.nomeFazenda = 'Nome da fazenda é obrigatório';
   if (!f.estado.trim() || f.estado.trim().length !== 2) e.estado = 'Digite a sigla do estado (ex: SP)';
-  if (!f.municipio.trim())   e.municipio    = 'Município é obrigatório';
-  if (!f.tipoCultura)        e.tipoCultura  = 'Selecione uma cultura';
+  if (!f.municipio.trim()) e.municipio = 'Município é obrigatório';
+  if (!f.tipoCultura) e.tipoCultura = 'Selecione uma cultura';
   const area = parseFloat(f.areaHectares);
   if (isNaN(area) || area <= 0) e.areaHectares = 'Área deve ser maior que zero';
   return e;
@@ -46,17 +46,17 @@ function validate(f: FormState): FormErrors {
 export default function FormPropriedadeScreen({ route, navigation }: any) {
   const { produtor } = useAuth();
   const editing = route.params?.propriedade;
-  const isEdit  = !!editing?.id;
+  const isEdit = !!editing?.id;
 
   const [form, setForm] = useState<FormState>({
-    nomeFazenda:  editing?.nomeFazenda  ?? '',
-    estado:       editing?.estado       ?? '',
-    municipio:    editing?.municipio    ?? '',
+    nomeFazenda:  editing?.nomeFazenda ?? '',
+    estado:       editing?.estado ?? '',
+    municipio:    editing?.municipio ?? '',
     areaHectares: editing?.areaHectares?.toString() ?? '',
     tipoCultura:  editing?.culturas?.[0]?.tipoCultura ?? '',
     safra:        editing?.culturas?.[0]?.safra ?? new Date().getFullYear().toString(),
   });
-  const [errors,  setErrors]  = useState<FormErrors>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
 
   function set(field: keyof FormState) {
@@ -84,14 +84,18 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
     try {
       if (isEdit) {
         await propriedadeService.atualizar(editing.id, payload);
-        Alert.alert('Atualizado!', 'Propriedade atualizada com sucesso.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        Alert.alert(
+          '✅ Fazenda Atualizada!',
+          `"${payload.nomeFazenda}" foi atualizada com sucesso.`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
       } else {
         await propriedadeService.criar(payload as any);
-        Alert.alert('Cadastrado!', 'Nova propriedade adicionada.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        Alert.alert(
+          '🌱 Fazenda Cadastrada!',
+          `"${payload.nomeFazenda}" foi adicionada com sucesso!\n\nCultura: ${payload.tipoCultura}\nÁrea: ${payload.areaHectares} ha\nLocalização: ${payload.municipio}, ${payload.estado}`,
+          [{ text: 'Ótimo!', onPress: () => navigation.goBack() }]
+        );
       }
     } catch (err: any) {
       Alert.alert('Erro', err.message || 'Não foi possível salvar.');
@@ -99,6 +103,11 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
       setLoading(false);
     }
   }
+
+  const localizacaoPreview = [form.municipio, form.estado.toUpperCase()].filter(Boolean).join(', ');
+  const areaPreview = form.areaHectares
+    ? `${form.areaHectares} ha · ${form.tipoCultura} · Safra ${form.safra}`
+    : '';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -118,23 +127,46 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
           <Text style={styles.label}>Nome da Fazenda *</Text>
           <View style={[styles.inputBox, errors.nomeFazenda ? styles.inputError : null]}>
             <Text style={styles.inputIcon}>🏡</Text>
-            <TextInput style={styles.input} value={form.nomeFazenda} onChangeText={set('nomeFazenda')} placeholder="Ex: Fazenda São João" placeholderTextColor="#4A6080" maxLength={80} />
+            <TextInput
+              style={styles.input}
+              value={form.nomeFazenda}
+              onChangeText={set('nomeFazenda')}
+              placeholder="Ex: Fazenda São João"
+              placeholderTextColor="#4A6080"
+              maxLength={80}
+            />
           </View>
           {errors.nomeFazenda ? <Text style={styles.errText}>{errors.nomeFazenda}</Text> : null}
 
           <View style={styles.row}>
-            <View style={[styles.fieldHalf]}>
+            <View style={styles.fieldHalf}>
               <Text style={styles.label}>Estado *</Text>
               <View style={[styles.inputBox, errors.estado ? styles.inputError : null]}>
-                <TextInput style={styles.input} value={form.estado} onChangeText={(t) => set('estado')(t.toUpperCase())} placeholder="SP" placeholderTextColor="#4A6080" maxLength={2} autoCapitalize="characters" />
+                <TextInput
+                  style={styles.input}
+                  value={form.estado}
+                  onChangeText={(t) => set('estado')(t.toUpperCase())}
+                  placeholder="SP"
+                  placeholderTextColor="#4A6080"
+                  maxLength={2}
+                  autoCapitalize="characters"
+                />
               </View>
               {errors.estado ? <Text style={styles.errText}>{errors.estado}</Text> : null}
             </View>
 
-            <View style={[styles.fieldHalf]}>
+            <View style={styles.fieldHalf}>
               <Text style={styles.label}>Área (ha) *</Text>
               <View style={[styles.inputBox, errors.areaHectares ? styles.inputError : null]}>
-                <TextInput style={styles.input} value={form.areaHectares} onChangeText={set('areaHectares')} placeholder="150" placeholderTextColor="#4A6080" keyboardType="decimal-pad" maxLength={10} />
+                <TextInput
+                  style={styles.input}
+                  value={form.areaHectares}
+                  onChangeText={set('areaHectares')}
+                  placeholder="150"
+                  placeholderTextColor="#4A6080"
+                  keyboardType="decimal-pad"
+                  maxLength={10}
+                />
                 <Text style={styles.unit}>ha</Text>
               </View>
               {errors.areaHectares ? <Text style={styles.errText}>{errors.areaHectares}</Text> : null}
@@ -144,14 +176,30 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
           <Text style={styles.label}>Município *</Text>
           <View style={[styles.inputBox, errors.municipio ? styles.inputError : null]}>
             <Text style={styles.inputIcon}>📍</Text>
-            <TextInput style={styles.input} value={form.municipio} onChangeText={set('municipio')} placeholder="Ex: Ribeirão Preto" placeholderTextColor="#4A6080" maxLength={80} autoCapitalize="words" />
+            <TextInput
+              style={styles.input}
+              value={form.municipio}
+              onChangeText={set('municipio')}
+              placeholder="Ex: Ribeirão Preto"
+              placeholderTextColor="#4A6080"
+              maxLength={80}
+              autoCapitalize="words"
+            />
           </View>
           {errors.municipio ? <Text style={styles.errText}>{errors.municipio}</Text> : null}
 
           <Text style={styles.label}>Safra</Text>
           <View style={styles.inputBox}>
             <Text style={styles.inputIcon}>📅</Text>
-            <TextInput style={styles.input} value={form.safra} onChangeText={set('safra')} placeholder="2025" placeholderTextColor="#4A6080" keyboardType="numeric" maxLength={4} />
+            <TextInput
+              style={styles.input}
+              value={form.safra}
+              onChangeText={set('safra')}
+              placeholder="2025"
+              placeholderTextColor="#4A6080"
+              keyboardType="numeric"
+              maxLength={4}
+            />
           </View>
 
           <Text style={[styles.label, { marginTop: 16 }]}>Cultura Plantada *</Text>
@@ -160,7 +208,12 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
             {CULTURAS.map(c => {
               const selected = form.tipoCultura === c;
               return (
-                <TouchableOpacity key={c} style={[styles.chip, selected && styles.chipSelected]} onPress={() => set('tipoCultura')(c)} activeOpacity={0.8}>
+                <TouchableOpacity
+                  key={c}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                  onPress={() => set('tipoCultura')(c)}
+                  activeOpacity={0.8}
+                >
                   <Text style={styles.chipIcon}>{CULT_ICON[c]}</Text>
                   <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{c}</Text>
                 </TouchableOpacity>
@@ -168,24 +221,21 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
             })}
           </View>
 
-          {form.nomeFazenda.trim() && form.tipoCultura && (
+          {(form.nomeFazenda.trim() && form.tipoCultura) ? (
             <View style={styles.preview}>
               <Text style={styles.previewLabel}>Prévia</Text>
-              <Text style={styles.previewName}>{CULT_ICON[form.tipoCultura]} {form.nomeFazenda}</Text>
-              {form.municipio ? (
-                <Text style={styles.previewSub}>
-                  {'📍 ' + form.municipio + (form.estado ? ', ' + form.estado.toUpperCase() : '')}
-                </Text>
-              ) : null}
-              {form.areaHectares ? (
-                <Text style={styles.previewSub}>
-                  {'📐 ' + form.areaHectares + ' ha · ' + form.tipoCultura + ' · Safra ' + form.safra}
-                </Text>
-              ) : null}
+              <Text style={styles.previewName}>{`${CULT_ICON[form.tipoCultura]} ${form.nomeFazenda}`}</Text>
+              {localizacaoPreview ? <Text style={styles.previewSub}>{`📍 ${localizacaoPreview}`}</Text> : null}
+              {areaPreview ? <Text style={styles.previewSub}>{`📐 ${areaPreview}`}</Text> : null}
             </View>
-          )}
+          ) : null}
 
-          <TouchableOpacity style={[styles.submitBtn, loading && { opacity: 0.6 }]} onPress={handleSubmit} disabled={loading} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={[styles.submitBtn, loading && { opacity: 0.6 }]}
+            onPress={handleSubmit}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
             {loading
               ? <ActivityIndicator color="#000" size="small" />
               : <Text style={styles.submitText}>{isEdit ? '💾 Salvar Alterações' : '✅ Cadastrar Fazenda'}</Text>
@@ -212,7 +262,7 @@ const styles = StyleSheet.create({
   headerTitle:      { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
   headerSubtitle:   { color: '#4A6080', fontSize: 12, marginTop: 2 },
   scroll:           { paddingHorizontal: 20, paddingTop: 24 },
-  row:              { flexDirection: 'row', gap: 12, marginBottom: 0 },
+  row:              { flexDirection: 'row', gap: 12 },
   fieldHalf:        { flex: 1 },
   label:            { fontSize: 11, color: '#4A6080', marginBottom: 8, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
   inputBox:         { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0D1B2A', borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.07)', paddingHorizontal: 14, marginBottom: 16 },
