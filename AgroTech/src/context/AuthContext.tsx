@@ -5,6 +5,7 @@ import { Produtor } from "../types";
 interface AuthContextType {
   isAuthenticated: boolean;
   produtor: Produtor | null;
+  user: Produtor | null;                  // ← ALIAS adicionado
   login: (produtor: Produtor) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -51,7 +52,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, produtor, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        produtor,
+        user: produtor,          // ← alias para compatibilidade
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

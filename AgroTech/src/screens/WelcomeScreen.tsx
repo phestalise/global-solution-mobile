@@ -10,24 +10,8 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../styles/colors";
-import { useAuth } from "../context/AuthContext";
 
 export default function WelcomeScreen({ navigation }: any) {
-  const { login } = useAuth();
-
-  const handleTestLogin = () => {
-    const produtorMock = {
-      id: 999,
-      nome: "Usuário Teste",
-      cpf: "00000000000",
-      estado: "SP",
-      cidade: "São Paulo",
-      email: "",
-      telefone: "",
-    };
-    login(produtorMock);
-  };
-
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -72,7 +56,7 @@ export default function WelcomeScreen({ navigation }: any) {
             </View>
           </View>
 
-          
+          {/* BOTÕES PRINCIPAIS */}
           <View style={styles.buttons}>
             <TouchableOpacity
               style={styles.loginButton}
@@ -88,21 +72,6 @@ export default function WelcomeScreen({ navigation }: any) {
               activeOpacity={0.85}
             >
               <Text style={styles.registerText}>Criar conta</Text>
-            </TouchableOpacity>
-
-            {/* BOTÃO DE TESTE SEM API */}
-            <TouchableOpacity
-              style={styles.testLoginButton}
-              onPress={handleTestLogin}
-              activeOpacity={0.85}
-            >
-              <Ionicons
-                name="flask-outline"
-                size={20}
-                color="#FFD966"
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.testLoginText}>Login de teste (sem API)</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -203,20 +172,5 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 17,
     fontWeight: "800",
-  },
-  testLoginButton: {
-    height: 52,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 217, 102, 0.08)",
-    borderWidth: 1,
-    borderColor: "#FFD966",
-    flexDirection: "row",
-  },
-  testLoginText: {
-    color: "#FFD966",
-    fontSize: 16,
-    fontWeight: "700",
   },
 });
