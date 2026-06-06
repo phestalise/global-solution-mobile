@@ -23,7 +23,7 @@ export default function AppHeader({ navigation }: any) {
             style={styles.logo}
           />
           <View>
-            <Text style={styles.title}>AstroFarm</Text>
+            <Text style={styles.title}>AgroTech</Text>
             <Text style={styles.subtitle}>Monitoramento Orbital</Text>
           </View>
         </View>

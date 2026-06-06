@@ -28,7 +28,7 @@ export default function SidebarMenu({ navigation, state }: DrawerContentComponen
         <View style={styles.logoCircle}>
           <Ionicons name="planet" size={36} color="#00F5A0" />
         </View>
-        <Text style={styles.appName}>AstroFarm</Text>
+        <Text style={styles.appName}>AgroTech</Text>
         <Text style={styles.slogan}>Monitoramento orbital</Text>
       </View>
 
