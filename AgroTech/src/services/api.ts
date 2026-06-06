@@ -5,7 +5,7 @@ import { Produtor, LeituraSatelital, Alerta } from "../types";
 const LOCAL_IP = "10.0.0.244";
 
 const BASE_URL = Platform.select({
-  android: "http://10.0.2.2:8080/api",
+  android: "http://13.71.191.204:8080/api",
   ios: `http://${LOCAL_IP}:8080/api`,
   default: "http://localhost:8080/api",
 });
