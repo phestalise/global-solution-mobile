@@ -23,8 +23,7 @@ O sistema é composto por:
 
 Tutorial rápido de execução e demonstração do projeto:
 
-https://youtube.com/shorts/tQ209o6pJII?feature=share
-
+https://youtube.com/shorts/4ulUMdMiAGY?feature=share
 ---
 
 # 🚀 Funcionalidades
