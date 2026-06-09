@@ -7,7 +7,7 @@ const LOCAL_IP = "10.0.0.244";
 const BASE_URL = Platform.select({
   android: "http://13.71.191.204:8080/api",
   ios: `http://${LOCAL_IP}:8080/api`,
-  default: "http://localhost:8080/api",
+  default: "http://13.71.191.204:8080/api",
 });
 
 const api: AxiosInstance = axios.create({
@@ -18,6 +18,14 @@ const api: AxiosInstance = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+  console.log("=== REQUEST ===");
+  console.log("URL:", (config.baseURL ?? "") + (config.url ?? ""));
+  console.log("BODY:", JSON.stringify(config.data, null, 2));
+  console.log("===============");
+  return config;
+});
+
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
@@ -25,7 +33,6 @@ api.interceptors.response.use(
     console.log("STATUS:", error.response?.status);
     console.log("DATA:", JSON.stringify(error.response?.data, null, 2));
     console.log("================");
-
     const data = error.response?.data as any;
     const msg =
       data?.message ||
@@ -65,9 +72,7 @@ export const produtorService = {
 
 export const propriedadeService = {
   listar: (produtorId: number) =>
-    api.get<any[]>("/propriedades", {
-      params: { produtorId },
-    }),
+    api.get<any[]>("/propriedades", { params: { produtorId } }),
 
   getById: (id: number) =>
     api.get<any>(`/propriedades/${id}`),
@@ -82,8 +87,7 @@ export const propriedadeService = {
     safra?: string;
     latitude?: number;
     longitude?: number;
-  }) =>
-    api.post<any>("/propriedades", data),
+  }) => api.post<any>("/propriedades", data),
 
   atualizar: (id: number, data: Partial<{
     nomeFazenda: string;
@@ -93,8 +97,7 @@ export const propriedadeService = {
     tipoCultura?: string;
     latitude?: number;
     longitude?: number;
-  }>) =>
-    api.put<any>(`/propriedades/${id}`, data),
+  }>) => api.put<any>(`/propriedades/${id}`, data),
 
   deletar: (id: number) =>
     api.delete(`/propriedades/${id}`),
@@ -102,9 +105,7 @@ export const propriedadeService = {
 
 export const leituraService = {
   listar: (propriedadeId: number, limit = 30) =>
-    api.get<LeituraSatelital[]>("/leituras", {
-      params: { propriedadeId, limit },
-    }),
+    api.get<LeituraSatelital[]>("/leituras", { params: { propriedadeId, limit } }),
 
   getUltima: (propriedadeId: number) =>
     api.get<LeituraSatelital>(`/leituras/ultima/${propriedadeId}`),
@@ -115,11 +116,8 @@ export const leituraService = {
       nome: string;
       leitura: LeituraSatelital;
       risco: string;
-    }[]>("/leituras/dashboard", {
-      params: { produtorId },
-    }),
+    }[]>("/leituras/dashboard", { params: { produtorId } }),
 
-  // NOVO MÉTODO – POST /api/leituras
   criar: (dados: {
     idPropriedade: number;
     ndvi?: number;
@@ -132,9 +130,7 @@ export const leituraService = {
 
 export const alertaService = {
   listar: (produtorId: number, apenasAtivos = true) =>
-    api.get<Alerta[]>("/alertas", {
-      params: { produtorId, ativo: apenasAtivos },
-    }),
+    api.get<Alerta[]>("/alertas", { params: { produtorId, ativo: apenasAtivos } }),
 
   resolver: (id: number) =>
     api.put(`/alertas/${id}/resolver`),
