@@ -12,30 +12,33 @@ import { useAuth } from "../context/AuthContext";
 export default function LoginScreen({ navigation }: any) {
   const [cpf, setCpf] = useState("");
   const [senha, setSenha] = useState("");
-  const [secureText, setSecureText] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(""); // 👈 estado para mensagem de erro visível
   const { login } = useAuth();
 
   const handleLogin = async () => {
+    // Limpa erro anterior
+    setErrorMsg("");
+
     const cpfLimpo = cpf.replace(/\D/g, "");
     if (cpfLimpo.length !== 11) {
-      Alert.alert("CPF inválido", "Digite um CPF de 11 dígitos.");
+      setErrorMsg("Digite um CPF de 11 dígitos.");
       return;
     }
-
     if (!senha.trim()) {
-      Alert.alert("Senha obrigatória", "Informe sua senha.");
+      setErrorMsg("Informe sua senha.");
       return;
     }
 
     setLoading(true);
     try {
-
       const response = await produtorService.login(cpfLimpo, senha);
       const produtor = response.data;
       await login(produtor);
     } catch (error: any) {
-      Alert.alert("Erro", error.message || "Falha ao fazer login.");
+      // Mostra a mensagem exata da API (ex.: "CPF ou senha inválidos.")
+      const mensagem = error?.message || "Erro ao fazer login. Tente novamente.";
+      setErrorMsg(mensagem);
     } finally {
       setLoading(false);
     }
@@ -55,14 +58,17 @@ export default function LoginScreen({ navigation }: any) {
             </View>
 
             <View style={styles.form}>
-              {/* CPF */}
+              {/* Campo CPF */}
               <View style={styles.inputContainer}>
                 <Ionicons name="card-outline" size={20} color="#7E8A97" style={styles.inputIcon} />
                 <TextInput
                   placeholder="CPF (apenas números)"
                   placeholderTextColor="#7E8A97"
                   value={cpf}
-                  onChangeText={(text) => setCpf(text.replace(/\D/g, ""))}
+                  onChangeText={(text) => {
+                    setCpf(text.replace(/\D/g, ""));
+                    setErrorMsg(""); // limpa erro ao digitar
+                  }}
                   keyboardType="numeric"
                   maxLength={11}
                   style={styles.input}
@@ -70,31 +76,32 @@ export default function LoginScreen({ navigation }: any) {
                 />
               </View>
 
-              {/* Senha */}
+              {/* Campo Senha */}
               <View style={styles.inputContainer}>
                 <Ionicons name="lock-closed-outline" size={20} color="#7E8A97" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Senha"
                   placeholderTextColor="#7E8A97"
                   value={senha}
-                  onChangeText={setSenha}
-                  secureTextEntry={secureText}
+                  onChangeText={(text) => {
+                    setSenha(text);
+                    setErrorMsg(""); // limpa erro ao digitar
+                  }}
+                  secureTextEntry={true}
                   style={styles.input}
                   editable={!loading}
                 />
-                <TouchableOpacity
-                  onPress={() => setSecureText(!secureText)}
-                  style={styles.eyeIcon}
-                  disabled={loading}
-                >
-                  <Ionicons
-                    name={secureText ? "eye-off-outline" : "eye-outline"}
-                    size={22}
-                    color="#7E8A97"
-                  />
-                </TouchableOpacity>
               </View>
 
+              {/* Mensagem de erro visível na tela */}
+              {errorMsg !== "" && (
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle" size={18} color="#fff" />
+                  <Text style={styles.errorText}>{errorMsg}</Text>
+                </View>
+              )}
+
+              {/* Botão de login */}
               <TouchableOpacity
                 style={[styles.loginButton, loading && { opacity: 0.7 }]}
                 onPress={handleLogin}
@@ -134,7 +141,22 @@ const styles = StyleSheet.create({
   inputContainer: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.card, borderRadius: 16, height: 58, marginBottom: 18, borderWidth: 1, borderColor: Colors.border },
   inputIcon: { marginLeft: 16, marginRight: 10 },
   input: { flex: 1, color: Colors.text, fontSize: 16, height: "100%" },
-  eyeIcon: { padding: 12 },
+  
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e74c3c",  
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 18,
+  },
+  errorText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
   loginButton: { backgroundColor: Colors.primary, height: 58, borderRadius: 16, justifyContent: "center", alignItems: "center", marginBottom: 16 },
   loginButtonText: { color: "#000", fontWeight: "800", fontSize: 18 },
   footer: { flexDirection: "row", justifyContent: "center", alignItems: "center", paddingBottom: 10 },

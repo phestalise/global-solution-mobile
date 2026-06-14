@@ -58,19 +58,26 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   function set(field: keyof FormState) {
     return (value: string) => {
       setForm(f => ({ ...f, [field]: value }));
       if ((errors as any)[field]) setErrors(e => ({ ...e, [field]: undefined }));
+      setFeedback(null); // limpa feedback ao digitar
     };
   }
 
   async function handleSubmit() {
     const errs = validate(form);
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      setFeedback({ type: 'error', message: 'Verifique os campos obrigatórios.' });
+      return;
+    }
 
     setLoading(true);
+    setFeedback(null);
     const payload = {
       idProdutor:   produtor!.id,
       nomeFazenda:  form.nomeFazenda.trim(),
@@ -84,6 +91,7 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
     try {
       if (isEdit) {
         await propriedadeService.atualizar(editing.id, payload);
+        setFeedback({ type: 'success', message: `Fazenda "${payload.nomeFazenda}" atualizada com sucesso!` });
         Alert.alert(
           '✅ Fazenda Atualizada!',
           `"${payload.nomeFazenda}" foi atualizada com sucesso.`,
@@ -91,6 +99,11 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
         );
       } else {
         await propriedadeService.criar(payload as any);
+        setFeedback({
+          type: 'success',
+          message: `Fazenda "${payload.nomeFazenda}" cadastrada com sucesso!\nCultura: ${payload.tipoCultura} • Área: ${payload.areaHectares} ha • Local: ${payload.municipio}, ${payload.estado}`
+        });
+        // Alerta tradicional como backup
         Alert.alert(
           '🌱 Fazenda Cadastrada!',
           `"${payload.nomeFazenda}" foi adicionada com sucesso!\n\nCultura: ${payload.tipoCultura}\nÁrea: ${payload.areaHectares} ha\nLocalização: ${payload.municipio}, ${payload.estado}`,
@@ -98,7 +111,9 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
         );
       }
     } catch (err: any) {
-      Alert.alert('Erro', err.message || 'Não foi possível salvar.');
+      const mensagem = err.message || 'Não foi possível salvar.';
+      setFeedback({ type: 'error', message: mensagem });
+      Alert.alert('Erro', mensagem);
     } finally {
       setLoading(false);
     }
@@ -123,6 +138,18 @@ export default function FormPropriedadeScreen({ route, navigation }: any) {
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+
+          {/* Feedback visual (sucesso/erro) */}
+          {feedback && (
+            <View style={[styles.feedbackBox, feedback.type === 'success' ? styles.successBox : styles.errorBox]}>
+              <Ionicons
+                name={feedback.type === 'success' ? 'checkmark-circle' : 'alert-circle'}
+                size={20}
+                color="#fff"
+              />
+              <Text style={styles.feedbackText}>{feedback.message}</Text>
+            </View>
+          )}
 
           <Text style={styles.label}>Nome da Fazenda *</Text>
           <View style={[styles.inputBox, errors.nomeFazenda ? styles.inputError : null]}>
@@ -271,6 +298,11 @@ const styles = StyleSheet.create({
   input:            { flex: 1, color: '#FFFFFF', fontSize: 15, paddingVertical: 14 },
   unit:             { fontSize: 13, color: '#4A6080' },
   errText:          { fontSize: 11, color: '#F44336', marginTop: -10, marginBottom: 10 },
+  // Caixas de feedback
+  feedbackBox:      { flexDirection: 'row', alignItems: 'center', borderRadius: 12, padding: 14, marginBottom: 20 },
+  successBox:       { backgroundColor: '#2E7D32' }, // verde escuro
+  errorBox:         { backgroundColor: '#C62828' }, // vermelho escuro
+  feedbackText:     { color: '#fff', fontSize: 14, fontWeight: '600', marginLeft: 10, flex: 1 },
   chipsGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
   chip:             { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#0D1B2A', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.07)' },
   chipSelected:     { borderColor: Colors.primary, backgroundColor: 'rgba(0,245,160,0.08)' },

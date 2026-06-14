@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   ScrollView, View, Text, StyleSheet, TouchableOpacity,
   RefreshControl, ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { Colors } from "../styles/colors";
 import { useAuth } from "../context/AuthContext";
 import { leituraService, alertaService } from "../services/api";
@@ -24,8 +25,8 @@ export default function DashboardScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const primeiraLeitura = dashboard[0]?.leitura;
-  const risco = calcularRisco(primeiraLeitura?.ndvi ?? 0);
+  // Estado para controlar qual propriedade está selecionada (pelo índice)
+  const [propriedadeIndex, setPropriedadeIndex] = useState(0);
 
   const buscarDados = useCallback(async () => {
     if (!produtor?.id) return;
@@ -37,6 +38,8 @@ export default function DashboardScreen({ navigation }: any) {
       ]);
       setDashboard(dashRes.data);
       setAlertas(alertasRes.data);
+      // Resetar o índice se a lista mudar (ex: propriedade removida)
+      setPropriedadeIndex(0);
     } catch (e: any) {
       setErro(e.message || "Erro ao carregar dados.");
     } finally {
@@ -45,14 +48,27 @@ export default function DashboardScreen({ navigation }: any) {
     }
   }, [produtor?.id]);
 
-  React.useEffect(() => {
-    buscarDados();
-  }, [buscarDados]);
+  useFocusEffect(
+    useCallback(() => {
+      buscarDados();
+    }, [buscarDados])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     buscarDados();
   }, [buscarDados]);
+
+  // Garante que o índice não ultrapasse o tamanho da lista
+  const propriedadeSelecionada = useMemo(() => {
+    if (dashboard.length === 0) return null;
+    const indexValido = Math.min(propriedadeIndex, dashboard.length - 1);
+    if (indexValido !== propriedadeIndex) setPropriedadeIndex(indexValido);
+    return dashboard[indexValido];
+  }, [dashboard, propriedadeIndex]);
+
+  const primeiraLeitura = propriedadeSelecionada?.leitura;
+  const risco = calcularRisco(primeiraLeitura?.ndvi ?? 0);
 
   if (loading) {
     return (
@@ -77,10 +93,10 @@ export default function DashboardScreen({ navigation }: any) {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.greeting}>Olá, {produtor?.nome?.split(" ")[0]} 👋</Text>
-            {dashboard[0] && (
+            {propriedadeSelecionada && (
               <View style={styles.locationRow}>
                 <Ionicons name="location" size={16} color={Colors.primary} />
-                <Text style={styles.locationText}>{dashboard[0].nome}</Text>
+                <Text style={styles.locationText}>{propriedadeSelecionada.nome}</Text>
               </View>
             )}
           </View>
@@ -90,6 +106,29 @@ export default function DashboardScreen({ navigation }: any) {
             </View>
           </TouchableOpacity>
         </View>
+
+        {/* Filtro de propriedades (chips) */}
+        {dashboard.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsContainer}
+            style={{ marginBottom: 20 }}
+          >
+            {dashboard.map((item, index) => (
+              <TouchableOpacity
+                key={item.propriedadeId}
+                style={[styles.chip, index === propriedadeIndex && styles.chipSelected]}
+                onPress={() => setPropriedadeIndex(index)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.chipText, index === propriedadeIndex && styles.chipTextSelected]}>
+                  {item.nome}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
         {erro && (
           <View style={styles.erroBox}>
@@ -119,7 +158,14 @@ export default function DashboardScreen({ navigation }: any) {
 
             <Text style={styles.sectionTitle}>Métricas em Tempo Real</Text>
             <View style={styles.metricsGrid}>
-              <TouchableOpacity style={styles.metricCard} onPress={() => navigation.navigate("DetalhesPropriedade", { metrica: "temperatura" })} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.metricCard}
+                onPress={() => navigation.navigate("DetalhesPropriedade", {
+                  propriedadeId: propriedadeSelecionada?.propriedadeId,
+                  metrica: "temperatura",
+                })}
+                activeOpacity={0.7}
+              >
                 <Ionicons name="thermometer" size={28} color="#FF8A65" />
                 <Text style={styles.metricValue}>{primeiraLeitura.temperatura.toFixed(1)}°C</Text>
                 <Text style={styles.metricLabel}>Temperatura</Text>
@@ -128,7 +174,14 @@ export default function DashboardScreen({ navigation }: any) {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.metricCard} onPress={() => navigation.navigate("DetalhesPropriedade", { metrica: "umidade" })} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.metricCard}
+                onPress={() => navigation.navigate("DetalhesPropriedade", {
+                  propriedadeId: propriedadeSelecionada?.propriedadeId,
+                  metrica: "umidade",
+                })}
+                activeOpacity={0.7}
+              >
                 <Ionicons name="water" size={28} color="#64B5F6" />
                 <Text style={styles.metricValue}>{primeiraLeitura.umidade.toFixed(0)}%</Text>
                 <Text style={styles.metricLabel}>Umidade do Solo</Text>
@@ -137,7 +190,14 @@ export default function DashboardScreen({ navigation }: any) {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.metricCard} onPress={() => navigation.navigate("DetalhesPropriedade", { metrica: "ndvi" })} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.metricCard}
+                onPress={() => navigation.navigate("DetalhesPropriedade", {
+                  propriedadeId: propriedadeSelecionada?.propriedadeId,
+                  metrica: "ndvi",
+                })}
+                activeOpacity={0.7}
+              >
                 <Ionicons name="leaf" size={28} color="#81C784" />
                 <Text style={styles.metricValue}>{primeiraLeitura.ndvi.toFixed(2)}</Text>
                 <Text style={styles.metricLabel}>NDVI</Text>
@@ -146,7 +206,14 @@ export default function DashboardScreen({ navigation }: any) {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.metricCard} onPress={() => navigation.navigate("DetalhesPropriedade", { metrica: "solo" })} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.metricCard}
+                onPress={() => navigation.navigate("DetalhesPropriedade", {
+                  propriedadeId: propriedadeSelecionada?.propriedadeId,
+                  metrica: "solo",
+                })}
+                activeOpacity={0.7}
+              >
                 <Ionicons name="earth" size={28} color="#FFD54F" />
                 <Text style={styles.metricValue}>{primeiraLeitura.statusSolo ?? "—"}</Text>
                 <Text style={styles.metricLabel}>Status do Solo</Text>
@@ -163,7 +230,17 @@ export default function DashboardScreen({ navigation }: any) {
             <View style={styles.semDados}>
               <Ionicons name="leaf-outline" size={48} color={Colors.textMuted} />
               <Text style={styles.semDadosText}>Nenhuma leitura disponível.</Text>
-              <Text style={styles.semDadosSubtext}>Cadastre uma propriedade para começar.</Text>
+              <Text style={styles.semDadosSubtext}>
+                {dashboard.length === 0
+                  ? "Cadastre uma propriedade para começar."
+                  : "Suas propriedades ainda não possuem leituras."}
+              </Text>
+              <TouchableOpacity
+                style={styles.verPropriedadesBtn}
+                onPress={() => navigation.navigate("Propriedades")}
+              >
+                <Text style={styles.verPropriedadesText}>Ver minhas propriedades</Text>
+              </TouchableOpacity>
             </View>
           )
         )}
@@ -217,12 +294,28 @@ const styles = StyleSheet.create({
   background: { flex: 1, paddingHorizontal: 20, paddingTop: 60 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingText: { color: Colors.textMuted, marginTop: 12, fontSize: 15 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 25 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   headerLeft: { flex: 1 },
   greeting: { fontSize: 26, fontWeight: "800", color: Colors.text },
   locationRow: { flexDirection: "row", alignItems: "center", marginTop: 6 },
   locationText: { color: Colors.textMuted, marginLeft: 4, fontSize: 14 },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: "#10263B", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: Colors.primary },
+  chipsContainer: { paddingVertical: 8, gap: 10 },
+  chip: {
+    backgroundColor: "#0D1B2A",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.07)",
+  },
+  chipSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: "rgba(0,245,160,0.08)",
+  },
+  chipText: { fontSize: 13, color: "#4A6080", fontWeight: "500" },
+  chipTextSelected: { color: Colors.primary, fontWeight: "700" },
   sectionTitle: { color: Colors.text, fontSize: 18, fontWeight: "700", marginBottom: 12 },
   erroBox: { flexDirection: "row", alignItems: "center", backgroundColor: "#1a0a0a", borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: "#F44336" },
   erroText: { color: "#F44336", marginLeft: 8, fontSize: 14, flex: 1 },
@@ -249,4 +342,18 @@ const styles = StyleSheet.create({
   semDados: { alignItems: "center", paddingVertical: 40 },
   semDadosText: { color: Colors.text, fontSize: 16, fontWeight: "700", marginTop: 16 },
   semDadosSubtext: { color: Colors.textMuted, fontSize: 14, marginTop: 6 },
+  verPropriedadesBtn: {
+    marginTop: 20,
+    backgroundColor: Colors.primary + "20",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  verPropriedadesText: {
+    color: Colors.primary,
+    fontWeight: "700",
+    fontSize: 14,
+  },
 });
